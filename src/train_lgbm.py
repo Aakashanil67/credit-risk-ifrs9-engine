@@ -32,6 +32,7 @@ from src.config import (
     TRAIN_MEDIANS_PATH,
 )
 from src.data_loader import load_application_data
+from src.features import build_lgbm_features
 from src.preprocessing import split_data
 
 PARAM_GRID = [
@@ -43,15 +44,6 @@ CV_N_ESTIMATORS = (
     300  # fixed and modest during the CV sweep — early stopping picks the real count later
 )
 CV_FOLDS = 5
-
-
-def build_lgbm_features(df: pd.DataFrame) -> pd.DataFrame:
-    feature_cols = [c for c in df.columns if c not in ("SK_ID_CURR", TARGET_COL)]
-    X = df[feature_cols].copy()
-    X["DAYS_EMPLOYED"] = X["DAYS_EMPLOYED"].replace(365243, np.nan)  # same sentinel bug as baseline
-    for col in X.select_dtypes("object").columns:
-        X[col] = X[col].astype("category")
-    return X
 
 
 def cv_select_params(X: pd.DataFrame, y: pd.Series) -> dict:

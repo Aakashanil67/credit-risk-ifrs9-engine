@@ -7,8 +7,9 @@ mlflow ui   # opens http://127.0.0.1:5000 — compare all 4 runs side by side
 from src.baseline import run_and_log as run_baseline
 from src.config import RANDOM_SEED, TARGET_COL
 from src.data_loader import load_application_data
+from src.features import build_lgbm_features
 from src.preprocessing import split_data
-from src.train_lgbm import PARAM_GRID, build_lgbm_features, train_and_log_variant
+from src.train_lgbm import PARAM_GRID, train_and_log_variant
 
 
 def main() -> None:

@@ -17,8 +17,8 @@ from sklearn.metrics import brier_score_loss
 
 from src.config import FIGURES_DIR, LGBM_MODEL_PATH, RANDOM_SEED, TARGET_COL
 from src.data_loader import load_application_data
+from src.features import build_lgbm_features
 from src.preprocessing import split_data
-from src.train_lgbm import build_lgbm_features
 
 SHAP_SAMPLE_SIZE = (
     3000  # full validation set (61k rows) isn't needed for a stable importance ranking
