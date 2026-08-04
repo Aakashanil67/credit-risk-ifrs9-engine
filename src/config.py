@@ -25,3 +25,5 @@ DEFAULT_EAD_COL = "AMT_CREDIT"
 
 # a loan is Stage 2 (lifetime ECL) if current PD has at least doubled since origination
 SICR_PD_RATIO_THRESHOLD = 2.0
+
+MLFLOW_EXPERIMENT_NAME = "credit-risk-ifrs9-engine"

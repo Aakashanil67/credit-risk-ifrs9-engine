@@ -6,12 +6,15 @@ full feature set later.
 """
 
 import matplotlib.pyplot as plt
+import mlflow
+import mlflow.statsmodels
 import numpy as np
 import pandas as pd
 import statsmodels.api as sm
+from scipy.stats import ks_2samp
 from sklearn.metrics import roc_auc_score, roc_curve
 
-from src.config import FIGURES_DIR, RANDOM_SEED, REPORTS_DIR, TARGET_COL
+from src.config import FIGURES_DIR, MLFLOW_EXPERIMENT_NAME, RANDOM_SEED, REPORTS_DIR, TARGET_COL
 from src.data_loader import load_application_data
 from src.preprocessing import split_data
 
@@ -138,25 +141,43 @@ def write_interpretation(table: pd.DataFrame, auc: float, out_path) -> None:
     out_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 
-def main() -> None:
-    df = load_application_data()
-    train, val, _test = split_data(df, seed=RANDOM_SEED)
-
+def run_and_log(
+    train: pd.DataFrame, val: pd.DataFrame
+) -> tuple[dict[str, float], sm.Logit, np.ndarray]:
+    """Fit the baseline, log it to MLflow, and return its metrics, fitted model and val predictions."""
     train_X, val_X = fill_with_train_median(engineer_features(train), engineer_features(val))
     train_y, val_y = train[TARGET_COL], val[TARGET_COL]
 
     model = fit_logit(train_X, train_y)
     val_pred = model.predict(sm.add_constant(val_X, has_constant="add"))
     auc = roc_auc_score(val_y, val_pred)
-    print(f"validation AUC: {auc:.4f}")
+    ks = ks_2samp(val_pred[val_y == 1], val_pred[val_y == 0]).statistic
+    metrics = {"AUC": auc, "Gini": 2 * auc - 1, "KS": ks}
+
+    mlflow.set_experiment(MLFLOW_EXPERIMENT_NAME)
+    with mlflow.start_run(run_name="logistic_baseline"):
+        mlflow.log_param("n_features", len(FEATURES))
+        mlflow.log_param("seed", RANDOM_SEED)
+        mlflow.log_metrics({k.lower(): v for k, v in metrics.items()})
+        mlflow.statsmodels.log_model(model, "model")
+
+    return metrics, model, val_pred
+
+
+def main() -> None:
+    df = load_application_data()
+    train, val, _test = split_data(df, seed=RANDOM_SEED)
+
+    metrics, model, val_pred = run_and_log(train, val)
+    print(f"validation AUC: {metrics['AUC']:.4f}")
 
     table = coefficient_table(model)
 
     FIGURES_DIR.mkdir(parents=True, exist_ok=True)
-    plot_roc(val_y, val_pred, auc, FIGURES_DIR / "baseline_roc.png")
+    plot_roc(val[TARGET_COL], val_pred, metrics["AUC"], FIGURES_DIR / "baseline_roc.png")
 
     REPORTS_DIR.mkdir(parents=True, exist_ok=True)
-    write_interpretation(table, auc, REPORTS_DIR / "baseline_interpretation.md")
+    write_interpretation(table, metrics["AUC"], REPORTS_DIR / "baseline_interpretation.md")
 
 
 if __name__ == "__main__":
