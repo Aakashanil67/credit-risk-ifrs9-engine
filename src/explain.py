@@ -26,6 +26,7 @@ SHAP_SAMPLE_SIZE = 3000  # full validation set (61k rows) isn't needed for a sta
 # Anything not listed here falls back to the raw column name — this covers what actually mattered,
 # not a hand-authored translation of all 122 raw columns.
 FEATURE_DESCRIPTIONS = {
+    "NAME_CONTRACT_TYPE": "loan type (cash vs revolving)",
     "EXT_SOURCE_1": "external credit bureau score (source 1)",
     "EXT_SOURCE_2": "external credit bureau score (source 2)",
     "EXT_SOURCE_3": "external credit bureau score (source 3)",
@@ -92,7 +93,10 @@ def reason_codes(
         value = feature_row[feat]
         desc = humanize_feature(feat)
 
-        if isinstance(value, int | float | np.integer | np.floating) and feat in train_medians.index:
+        if pd.isna(value):
+            # e.g. a bureau score the applicant's file doesn't have yet — "low" would be a lie
+            clause = f"missing {desc}"
+        elif isinstance(value, int | float | np.integer | np.floating) and feat in train_medians.index:
             qualifier = "high" if value > train_medians[feat] else "low"
             clause = f"{qualifier} {desc}"
         else:
