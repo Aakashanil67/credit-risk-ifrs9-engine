@@ -32,6 +32,7 @@ Thumbs.db
 
 # editor
 .vscode/
+.claude/
 
 # personal planning docs, not part of the shipped project
 *.pdf
