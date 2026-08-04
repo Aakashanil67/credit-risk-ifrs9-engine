@@ -7,8 +7,10 @@ DATA_DIR = ROOT / "data"
 PROCESSED_DIR = DATA_DIR / "processed"
 REPORTS_DIR = ROOT / "reports"
 FIGURES_DIR = REPORTS_DIR / "figures"
+MODELS_DIR = ROOT / "models"
 
 RAW_TRAIN_PATH = DATA_DIR / "application_train.csv"
+LGBM_MODEL_PATH = MODELS_DIR / "lgbm_model.joblib"
 
 RANDOM_SEED = 42
 TARGET_COL = "TARGET"

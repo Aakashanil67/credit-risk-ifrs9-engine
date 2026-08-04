@@ -24,7 +24,7 @@ def main() -> None:
 
     for params in PARAM_GRID:
         run_name = f"lgbm_lr{params['learning_rate']}_leaves{params['num_leaves']}"
-        metrics, best_iteration = train_and_log_variant(
+        metrics, best_iteration, _model = train_and_log_variant(
             train_X, train_y, val_X, val_y, params, run_name=run_name
         )
         print(f"{run_name} (stopped at {best_iteration} trees): {metrics}")
