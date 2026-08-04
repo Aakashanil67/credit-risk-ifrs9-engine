@@ -1,9 +1,11 @@
 # FastAPI predict service.
 #
-# models/ is intentionally NOT copied into this image — it's gitignored, and the Kaggle
-# competition's terms don't allow redistributing the training data, so there's nothing to bake
-# model artifacts from at build time anyway. Mount a host models/ directory at runtime instead
-# (see docker-compose.yml), produced by running `python -m src.train_lgbm` once outside Docker.
+# models/*.joblib are committed to git (they're learned parameters, not the Kaggle dataset, so
+# this doesn't run into Kaggle's redistribution restriction — see CLAUDE.md) and COPYed in below,
+# so the image is self-sufficient. docker-compose.yml also volume-mounts ./models over this at
+# local dev time so a retrain doesn't require a rebuild, but a platform that just builds this
+# Dockerfile directly (Render, with no host filesystem to mount from) gets a working image either
+# way — that gap is exactly what broke the first Render deploy attempt.
 
 FROM python:3.12-slim
 
@@ -27,6 +29,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY src/ src/
 COPY api/ api/
+COPY models/ models/
 
 EXPOSE 8000
 

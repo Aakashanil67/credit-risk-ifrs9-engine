@@ -1,4 +1,4 @@
-# Streamlit dashboard. Same models/-not-copied reasoning as api/Dockerfile — mounted at runtime.
+# Streamlit dashboard. Same models/ handling as api/Dockerfile — see that file's comment.
 
 FROM python:3.12-slim
 
@@ -14,6 +14,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY src/ src/
 COPY api/ api/
 COPY app/ app/
+COPY models/ models/
 
 EXPOSE 8501
 

@@ -147,9 +147,12 @@ there's no Kaggle data in CI). Lint: `ruff check . && ruff format --check .`. Pr
   debugging time (see `CLAUDE.md`). Worked around by driving `OptimalBinning(solver="mip")`
   directly per feature and computing the PDO points table by hand instead of trusting the
   higher-level API.
-- **Model artifacts aren't baked into the Docker images.** `models/` is gitignored and Kaggle's
-  terms don't allow redistributing the training data, so there's nothing to build a model from
-  inside a fresh image anyway; it's mounted read-only from the host at runtime instead.
+- **Model artifacts (`models/*.joblib`, ~944KB) are committed to git and baked into both Docker
+  images.** They're learned parameters, not the Kaggle dataset, so this doesn't run into Kaggle's
+  redistribution restriction. `docker-compose.yml` also volume-mounts a host `models/` over the
+  baked-in copy for local dev (retrain without rebuilding), but the images are self-sufficient
+  without it — which matters on a platform like Render that builds the Dockerfile directly with
+  no host filesystem to mount from.
 - **Reason codes say "missing", never guess "low", for a NaN feature.** A new applicant has no
   bureau file yet; claiming their (unmeasured) score is low would be a false, specific claim about
   a real person's credit file, not a harmless approximation.
