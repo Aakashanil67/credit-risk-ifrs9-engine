@@ -1,0 +1,26 @@
+# Run `python -m src.train_lgbm` on the host first (needs data/application_train.csv, which
+# isn't in this repo — see README for where to get it) so ./models has real artifacts before
+# `docker compose up`. Without that, both containers start but /predict 503s.
+
+services:
+  api:
+    build:
+      context: .
+      dockerfile: api/Dockerfile
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./models:/app/models:ro
+
+  dashboard:
+    build:
+      context: .
+      dockerfile: app/Dockerfile
+    ports:
+      - "8501:8501"
+    volumes:
+      - ./models:/app/models:ro
+    environment:
+      - API_URL=http://api:8000
+    depends_on:
+      - api

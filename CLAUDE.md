@@ -34,7 +34,17 @@ Running context for this repo. Updated after each build step, not just at the en
 
 ## Known issues / deferred
 
-- Docker Desktop is not installed on this machine. Dockerfiles will be written and explained but not built/run unless that changes.
+- Docker Desktop is not installed on this machine. `api/Dockerfile`, `app/Dockerfile` and
+  `docker-compose.yml` are written, commented line-by-line, and YAML-validated, but never
+  actually built or run — `docker compose up` needs verifying once Docker is available.
+  `models/` is mounted read-only at runtime rather than baked into the image (gitignored, and
+  Kaggle's terms don't allow redistributing the data to bake it from anyway) — run
+  `python -m src.train_lgbm` on the host first.
+- `requirements.txt` drags training-only packages (statsmodels, mlflow, scipy, optbinning) into
+  the serving images because `api/scoring.py` imports `src.explain` -> `src.train_lgbm` ->
+  `src.baseline`, and Python executes that whole import chain at module load even though the API
+  only calls a few functions from it. A serving-only import path would shrink the image; not done
+  since it touches several modules for a size win, not a correctness one.
 - Render.com / Streamlit Community Cloud deployment needs the user's own accounts on those services — documented as a manual step, not executed here.
 
 ## Environment notes
