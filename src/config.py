@@ -11,6 +11,13 @@ MODELS_DIR = ROOT / "models"
 
 RAW_TRAIN_PATH = DATA_DIR / "application_train.csv"
 LGBM_MODEL_PATH = MODELS_DIR / "lgbm_model.joblib"
+TRAIN_MEDIANS_PATH = MODELS_DIR / "train_medians.joblib"
+CAT_DTYPES_PATH = MODELS_DIR / "category_dtypes.joblib"
+
+# approve/decline cutoff for the API — set to the population base default rate (8.1%, see
+# reports/eda_summary.md); a real deployment would tune this against a target approval rate or
+# expected loss budget, but a round, explainable number beats an unexplained one for a demo.
+DECISION_THRESHOLD = 0.08
 
 RANDOM_SEED = 42
 TARGET_COL = "TARGET"

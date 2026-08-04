@@ -1,3 +1,4 @@
+import numpy as np
 import pandas as pd
 import pytest
 
@@ -50,6 +51,18 @@ def test_reason_codes_falls_back_to_value_for_unknown_medians(train_medians: pd.
     codes = reason_codes(shap_row, feature_row, train_medians, top_n=1)
 
     assert "unknown column of some_category" in codes[0].lower()
+
+
+def test_reason_codes_flags_missing_value_instead_of_calling_it_low(train_medians: pd.Series) -> None:
+    """A new applicant with no bureau file yet has NaN EXT_SOURCE_3, not a genuinely low score —
+    saying 'low' would be a false, and consequential, claim about a real person's credit file."""
+    shap_row = pd.Series({"EXT_SOURCE_3": 0.5})
+    feature_row = pd.Series({"EXT_SOURCE_3": np.nan})
+
+    codes = reason_codes(shap_row, feature_row, train_medians, top_n=1)
+
+    assert "missing external credit bureau score" in codes[0].lower()
+    assert "low" not in codes[0].lower()
 
 
 def test_humanize_feature_uses_dictionary_then_falls_back() -> None:

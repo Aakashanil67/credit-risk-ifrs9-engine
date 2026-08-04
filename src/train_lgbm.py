@@ -22,12 +22,14 @@ from sklearn.model_selection import StratifiedKFold
 
 from src.baseline import run_and_log as run_baseline
 from src.config import (
+    CAT_DTYPES_PATH,
     LGBM_MODEL_PATH,
     MLFLOW_EXPERIMENT_NAME,
     MODELS_DIR,
     RANDOM_SEED,
     REPORTS_DIR,
     TARGET_COL,
+    TRAIN_MEDIANS_PATH,
 )
 from src.data_loader import load_application_data
 from src.preprocessing import split_data
@@ -162,6 +164,12 @@ def main() -> None:
 
     MODELS_DIR.mkdir(parents=True, exist_ok=True)
     joblib.dump(model, LGBM_MODEL_PATH)
+    joblib.dump(train_X.select_dtypes("number").median(), TRAIN_MEDIANS_PATH)
+    # persist the exact category boundaries LightGBM was trained on — encoding a category column
+    # against a *different* set of categories at inference time silently shifts every code and
+    # produces wrong predictions with no error, so inference must reuse these dtypes exactly.
+    cat_dtypes = {col: train_X[col].dtype for col in train_X.select_dtypes("category").columns}
+    joblib.dump(cat_dtypes, CAT_DTYPES_PATH)
     print(f"saved tuned model to {LGBM_MODEL_PATH}")
 
     baseline_metrics, _model, _pred = run_baseline(train, val)
