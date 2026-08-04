@@ -22,7 +22,9 @@ def test_lifetime_pd_compounds_above_12m_pd() -> None:
 
 
 def test_approximate_loan_term_clips_extreme_annuities() -> None:
-    df = pd.DataFrame({"AMT_CREDIT": [100_000, 100_000, 100_000], "AMT_ANNUITY": [50_000, 1, 5_000]})
+    df = pd.DataFrame(
+        {"AMT_CREDIT": [100_000, 100_000, 100_000], "AMT_ANNUITY": [50_000, 1, 5_000]}
+    )
     term = approximate_loan_term_years(df)
 
     assert term.iloc[0] == pytest.approx(12 / 12)  # 2-month term clipped up to the 12-month floor
@@ -41,7 +43,9 @@ def test_stage_loans_assigns_stage_1_when_no_sicr_and_low_pd() -> None:
 
 def test_stage_loans_assigns_stage_2_when_pd_doubles() -> None:
     current_pd = pd.Series([0.10])
-    origination_pd = pd.Series([0.04])  # ratio 2.5x >= threshold, but still below 0.5 impaired cutoff
+    origination_pd = pd.Series(
+        [0.04]
+    )  # ratio 2.5x >= threshold, but still below 0.5 impaired cutoff
 
     stage = stage_loans(current_pd, origination_pd)
 

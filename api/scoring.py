@@ -39,7 +39,9 @@ def load_artifacts() -> dict:
     }
 
 
-def applicant_to_row(req: ApplicantRequest, feature_names: list[str], cat_dtypes: dict) -> pd.DataFrame:
+def applicant_to_row(
+    req: ApplicantRequest, feature_names: list[str], cat_dtypes: dict
+) -> pd.DataFrame:
     """Map the applicant form onto the model's raw Home Credit column names.
 
     Fields the form doesn't ask for (most notably EXT_SOURCE_1/2/3 — external credit-bureau
@@ -76,7 +78,9 @@ def applicant_to_row(req: ApplicantRequest, feature_names: list[str], cat_dtypes
     return row
 
 
-def score_applicant(req: ApplicantRequest, artifacts: dict, lgd: float = DEFAULT_LGD) -> PredictResponse:
+def score_applicant(
+    req: ApplicantRequest, artifacts: dict, lgd: float = DEFAULT_LGD
+) -> PredictResponse:
     row = applicant_to_row(req, artifacts["feature_names"], artifacts["cat_dtypes"])
     pd_estimate = float(artifacts["model"].predict_proba(row)[0, 1])
     decision = "decline" if pd_estimate >= DECISION_THRESHOLD else "approve"

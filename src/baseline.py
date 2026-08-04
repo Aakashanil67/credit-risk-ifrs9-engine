@@ -58,7 +58,9 @@ def engineer_features(df: pd.DataFrame) -> pd.DataFrame:
     return out
 
 
-def fill_with_train_median(train_X: pd.DataFrame, val_X: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame]:
+def fill_with_train_median(
+    train_X: pd.DataFrame, val_X: pd.DataFrame
+) -> tuple[pd.DataFrame, pd.DataFrame]:
     medians = train_X.median()
     return train_X.fillna(medians), val_X.fillna(medians)
 
@@ -136,7 +138,9 @@ def write_interpretation(table: pd.DataFrame, auc: float, out_path) -> None:
         "|---|---|---|---|",
     ]
     for feat, row in table.iterrows():
-        lines.append(f"| {feat} | {row['coef']:.4f} | {row['odds_ratio']:.4f} | {row['p_value']:.2e} |")
+        lines.append(
+            f"| {feat} | {row['coef']:.4f} | {row['odds_ratio']:.4f} | {row['p_value']:.2e} |"
+        )
 
     out_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
 

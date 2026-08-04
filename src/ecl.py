@@ -44,13 +44,17 @@ from src.train_lgbm import build_lgbm_features
 
 CREDIT_IMPAIRED_PD_THRESHOLD = 0.5  # Stage 3 if the model gives default better than even odds
 MIN_TERM_MONTHS = 12
-MAX_TERM_MONTHS = 360  # 30 years — bounds an occasional AMT_ANNUITY near zero from blowing up the term
+MAX_TERM_MONTHS = (
+    360  # 30 years — bounds an occasional AMT_ANNUITY near zero from blowing up the term
+)
 
 
 def approximate_loan_term_years(df: pd.DataFrame) -> pd.Series:
     """AMT_CREDIT / AMT_ANNUITY approximates months-to-repay, ignoring interest — a real
     amortisation schedule would use the contractual term, which isn't in this dataset."""
-    term_months = (df["AMT_CREDIT"] / df["AMT_ANNUITY"]).clip(lower=MIN_TERM_MONTHS, upper=MAX_TERM_MONTHS)
+    term_months = (df["AMT_CREDIT"] / df["AMT_ANNUITY"]).clip(
+        lower=MIN_TERM_MONTHS, upper=MAX_TERM_MONTHS
+    )
     return term_months / 12
 
 
@@ -154,7 +158,7 @@ def write_ifrs9_summary(summary: dict, lgd: float, out_path) -> None:
         "separately for disclosure as IFRS 9 requires.",
         "",
         "**Limitation, stated plainly**: SICR is proxied by comparing the tuned LightGBM model's "
-        "PD (\"current\") against the logistic baseline's PD (\"origination\") for the same "
+        'PD ("current") against the logistic baseline\'s PD ("origination") for the same '
         "applicant, because this dataset is one static snapshot with no repeat observations of "
         "the same loan over time. A production system would compare a loan's PD today against "
         "its own PD at the actual origination date, not two different models' opinions of the "

@@ -1,7 +1,7 @@
 """Run the baseline plus three LightGBM variants, each logged as its own MLflow run.
 
-    python run_experiments.py
-    mlflow ui   # opens http://127.0.0.1:5000 — compare all 4 runs side by side
+python run_experiments.py
+mlflow ui   # opens http://127.0.0.1:5000 — compare all 4 runs side by side
 """
 
 from src.baseline import run_and_log as run_baseline
