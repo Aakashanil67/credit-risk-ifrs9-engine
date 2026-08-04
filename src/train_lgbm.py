@@ -39,7 +39,9 @@ PARAM_GRID = [
     {"learning_rate": 0.05, "num_leaves": 63},
     {"learning_rate": 0.10, "num_leaves": 31},
 ]
-CV_N_ESTIMATORS = 300  # fixed and modest during the CV sweep — early stopping picks the real count later
+CV_N_ESTIMATORS = (
+    300  # fixed and modest during the CV sweep — early stopping picks the real count later
+)
 CV_FOLDS = 5
 
 
@@ -127,7 +129,9 @@ def train_and_log_variant(
     return metrics, model.best_iteration_, model
 
 
-def write_comparison(baseline: dict, lgbm: dict, best_params: dict, best_iteration: int, out_path) -> None:
+def write_comparison(
+    baseline: dict, lgbm: dict, best_params: dict, best_iteration: int, out_path
+) -> None:
     lines = [
         "# Baseline vs LightGBM",
         "",
@@ -139,9 +143,7 @@ def write_comparison(baseline: dict, lgbm: dict, best_params: dict, best_iterati
     ]
     for metric in ("AUC", "Gini", "KS"):
         delta = lgbm[metric] - baseline[metric]
-        lines.append(
-            f"| {metric} | {baseline[metric]:.4f} | {lgbm[metric]:.4f} | {delta:+.4f} |"
-        )
+        lines.append(f"| {metric} | {baseline[metric]:.4f} | {lgbm[metric]:.4f} | {delta:+.4f} |")
     out_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 
@@ -177,7 +179,11 @@ def main() -> None:
 
     REPORTS_DIR.mkdir(parents=True, exist_ok=True)
     write_comparison(
-        baseline_metrics, lgbm_metrics, best_params, best_iteration, REPORTS_DIR / "model_comparison.md"
+        baseline_metrics,
+        lgbm_metrics,
+        best_params,
+        best_iteration,
+        REPORTS_DIR / "model_comparison.md",
     )
 
 

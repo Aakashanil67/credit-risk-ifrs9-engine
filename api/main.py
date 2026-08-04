@@ -7,7 +7,9 @@ happens by restarting the service, not on the request path.
 
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
+from fastapi.exceptions import RequestValidationError
+from fastapi.responses import JSONResponse
 
 from api.schemas import ApplicantRequest, PredictResponse
 from api.scoring import load_artifacts, score_applicant
@@ -28,6 +30,14 @@ app = FastAPI(
     version="1.0.0",
     lifespan=lifespan,
 )
+
+
+@app.exception_handler(RequestValidationError)
+async def clear_validation_errors(request: Request, exc: RequestValidationError) -> JSONResponse:
+    """FastAPI's default 422 body nests each error under loc/msg/type/ctx/url — accurate, but a
+    caller has to reconstruct the field name from a list. Flatten it to 'field: message' instead."""
+    errors = [f"{'.'.join(str(p) for p in err['loc'][1:])}: {err['msg']}" for err in exc.errors()]
+    return JSONResponse(status_code=422, content={"detail": errors})
 
 
 @app.get("/health")

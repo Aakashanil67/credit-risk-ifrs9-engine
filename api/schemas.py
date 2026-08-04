@@ -20,7 +20,9 @@ class ApplicantRequest(BaseModel):
     income_total: float = Field(..., gt=0, description="Annual income, rand")
     credit_amount: float = Field(..., gt=0, description="Requested loan amount, rand")
     annuity: float = Field(..., gt=0, description="Monthly repayment (annuity), rand")
-    goods_price: float | None = Field(None, gt=0, description="Price of goods financed, if applicable")
+    goods_price: float | None = Field(
+        None, gt=0, description="Price of goods financed, if applicable"
+    )
     gender: Literal["M", "F"] = Field(..., description="As recorded on the application")
     owns_car: bool = False
     owns_realty: bool = False
@@ -30,12 +32,17 @@ class ApplicantRequest(BaseModel):
         "Secondary / secondary special",
         description="e.g. 'Higher education', 'Secondary / secondary special'",
     )
-    income_type: str = Field("Working", description="e.g. 'Working', 'Commercial associate', 'Pensioner'")
+    income_type: str = Field(
+        "Working", description="e.g. 'Working', 'Commercial associate', 'Pensioner'"
+    )
     family_status: str = Field("Married", description="e.g. 'Married', 'Single / not married'")
     occupation: str | None = Field(None, description="e.g. 'Laborers', 'Sales staff', 'Managers'")
     organization_type: str | None = Field(None, description="Employer type, e.g. 'Self-employed'")
     region_population_relative: float | None = Field(
-        None, ge=0, le=1, description="Normalised population density of home region; omit if unknown"
+        None,
+        ge=0,
+        le=1,
+        description="Normalised population density of home region; omit if unknown",
     )
     own_car_age: float | None = Field(None, ge=0, le=80)
 

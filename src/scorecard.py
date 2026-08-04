@@ -60,9 +60,21 @@ BASE_SCORE = 600
 
 
 def engineer_scorecard_features(df: pd.DataFrame) -> pd.DataFrame:
-    out = df[["EXT_SOURCE_1", "EXT_SOURCE_2", "EXT_SOURCE_3", "AMT_INCOME_TOTAL", "AMT_CREDIT",
-              "AMT_ANNUITY", "REGION_POPULATION_RELATIVE", "CNT_CHILDREN",
-              "CODE_GENDER", "NAME_EDUCATION_TYPE", "FLAG_OWN_CAR"]].copy()
+    out = df[
+        [
+            "EXT_SOURCE_1",
+            "EXT_SOURCE_2",
+            "EXT_SOURCE_3",
+            "AMT_INCOME_TOTAL",
+            "AMT_CREDIT",
+            "AMT_ANNUITY",
+            "REGION_POPULATION_RELATIVE",
+            "CNT_CHILDREN",
+            "CODE_GENDER",
+            "NAME_EDUCATION_TYPE",
+            "FLAG_OWN_CAR",
+        ]
+    ].copy()
     out["age_years"] = -df["DAYS_BIRTH"] / 365.25
     out["years_employed"] = df["DAYS_EMPLOYED"].replace(365243, np.nan) / -365.25
     return out[FEATURES]
@@ -121,7 +133,9 @@ def base_points(model: LogisticRegression) -> float:
     return offset - factor * model.intercept_[0]
 
 
-def score(X: pd.DataFrame, binnings: dict[str, OptimalBinning], model: LogisticRegression) -> np.ndarray:
+def score(
+    X: pd.DataFrame, binnings: dict[str, OptimalBinning], model: LogisticRegression
+) -> np.ndarray:
     woe = woe_transform(X, binnings)
     factor = PDO / np.log(2)
     contributions = -factor * (woe * model.coef_[0]).sum(axis=1)
@@ -149,7 +163,9 @@ def write_scorecard_report(iv: pd.DataFrame, points: pd.DataFrame, base: float, 
 
     lines += ["", "## Points table", "", "| feature | bin | WoE | points |", "|---|---|---|---|"]
     for _, row in points.iterrows():
-        lines.append(f"| {row['feature']} | {row['bin']} | {row['woe']:.4f} | {row['points']:+.1f} |")
+        lines.append(
+            f"| {row['feature']} | {row['bin']} | {row['woe']:.4f} | {row['points']:+.1f} |"
+        )
 
     out_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
@@ -177,7 +193,9 @@ def main() -> None:
 
     val_X = engineer_scorecard_features(val)
     val_scores = score(val_X, binnings, model)
-    print(f"validation score range: {val_scores.min():.0f}-{val_scores.max():.0f}, mean {val_scores.mean():.1f}")
+    print(
+        f"validation score range: {val_scores.min():.0f}-{val_scores.max():.0f}, mean {val_scores.mean():.1f}"
+    )
 
 
 if __name__ == "__main__":

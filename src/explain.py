@@ -20,7 +20,9 @@ from src.data_loader import load_application_data
 from src.preprocessing import split_data
 from src.train_lgbm import build_lgbm_features
 
-SHAP_SAMPLE_SIZE = 3000  # full validation set (61k rows) isn't needed for a stable importance ranking
+SHAP_SAMPLE_SIZE = (
+    3000  # full validation set (61k rows) isn't needed for a stable importance ranking
+)
 
 # Human-readable descriptions for the features that show up most often in the global ranking.
 # Anything not listed here falls back to the raw column name — this covers what actually mattered,
@@ -96,7 +98,10 @@ def reason_codes(
         if pd.isna(value):
             # e.g. a bureau score the applicant's file doesn't have yet — "low" would be a lie
             clause = f"missing {desc}"
-        elif isinstance(value, int | float | np.integer | np.floating) and feat in train_medians.index:
+        elif (
+            isinstance(value, int | float | np.integer | np.floating)
+            and feat in train_medians.index
+        ):
             qualifier = "high" if value > train_medians[feat] else "low"
             clause = f"{qualifier} {desc}"
         else:
@@ -124,8 +129,13 @@ def calibration_summary(y_true: pd.Series, y_pred: np.ndarray, n_bins: int = 10)
 
 def plot_calibration_curve(calibration: dict, out_path) -> None:
     fig, ax = plt.subplots(figsize=(5, 5))
-    ax.plot(calibration["predicted"], calibration["observed"], marker="o", color="#2a6f97",
-            label=f"LightGBM (Brier={calibration['brier_score']:.4f})")
+    ax.plot(
+        calibration["predicted"],
+        calibration["observed"],
+        marker="o",
+        color="#2a6f97",
+        label=f"LightGBM (Brier={calibration['brier_score']:.4f})",
+    )
     ax.plot([0, 1], [0, 1], linestyle="--", color="gray", label="perfectly calibrated")
     ax.set_xlabel("predicted PD (bin mean)")
     ax.set_ylabel("observed default rate (bin mean)")

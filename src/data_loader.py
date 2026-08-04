@@ -61,8 +61,10 @@ def main() -> None:
     print(f"target balance:\n{target_balance(df)}")
 
     missing = missing_value_report(df)
-    print(f"{len(missing)} columns have missing values, worst: "
-          f"{missing.index[0]} ({missing.iloc[0]['missing_pct']}%)")
+    print(
+        f"{len(missing)} columns have missing values, worst: "
+        f"{missing.index[0]} ({missing.iloc[0]['missing_pct']}%)"
+    )
 
     REPORTS_DIR.mkdir(parents=True, exist_ok=True)
     write_data_dictionary(df, missing, REPORTS_DIR / "data_dictionary.md")

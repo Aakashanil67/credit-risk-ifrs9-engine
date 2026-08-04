@@ -53,7 +53,9 @@ def test_reason_codes_falls_back_to_value_for_unknown_medians(train_medians: pd.
     assert "unknown column of some_category" in codes[0].lower()
 
 
-def test_reason_codes_flags_missing_value_instead_of_calling_it_low(train_medians: pd.Series) -> None:
+def test_reason_codes_flags_missing_value_instead_of_calling_it_low(
+    train_medians: pd.Series,
+) -> None:
     """A new applicant with no bureau file yet has NaN EXT_SOURCE_3, not a genuinely low score —
     saying 'low' would be a false, and consequential, claim about a real person's credit file."""
     shap_row = pd.Series({"EXT_SOURCE_3": 0.5})

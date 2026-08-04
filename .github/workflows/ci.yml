@@ -20,5 +20,17 @@ jobs:
       - run: pip install -r requirements.txt
 
       - run: ruff check .
+      - run: ruff format --check .
 
       - run: pytest -v
+
+  docker-build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build API image
+        run: docker build -f api/Dockerfile -t credit-risk-api .
+
+      - name: Build dashboard image
+        run: docker build -f app/Dockerfile -t credit-risk-dashboard .

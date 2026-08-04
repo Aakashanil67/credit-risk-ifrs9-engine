@@ -47,15 +47,23 @@ def score_locally(req: ApplicantRequest, lgd: float) -> dict:
 
 
 st.title("Credit Risk & IFRS 9 Engine")
-st.caption("Score a loan applicant: probability of default, decision, SHAP reason codes, IFRS 9 ECL.")
+st.caption(
+    "Score a loan applicant: probability of default, decision, SHAP reason codes, IFRS 9 ECL."
+)
 
 with st.sidebar:
     st.header("Provisioning assumptions")
     lgd = st.slider(
-        "LGD — loss given default", min_value=0.0, max_value=1.0, value=DEFAULT_LGD, step=0.05,
+        "LGD — loss given default",
+        min_value=0.0,
+        max_value=1.0,
+        value=DEFAULT_LGD,
+        step=0.05,
         help="Share of exposure not recovered after a default. Applied on top of whatever PD the model returns.",
     )
-    st.caption(f"EAD is the applicant's requested credit amount (`{DEFAULT_EAD_COL}`) — set it in the form.")
+    st.caption(
+        f"EAD is the applicant's requested credit amount (`{DEFAULT_EAD_COL}`) — set it in the form."
+    )
     st.divider()
     st.caption(f"API: `{API_URL}`")
 
@@ -76,23 +84,36 @@ with st.form("applicant_form"):
     with col2:
         st.subheader("Employment & income")
         years_employed = st.number_input(
-            "Years employed (leave 0 if not currently employed)", min_value=0.0, max_value=60.0, value=5.0
+            "Years employed (leave 0 if not currently employed)",
+            min_value=0.0,
+            max_value=60.0,
+            value=5.0,
         )
         income_type = st.selectbox(
-            "Income type", ["Working", "Commercial associate", "Pensioner", "State servant", "Student"]
+            "Income type",
+            ["Working", "Commercial associate", "Pensioner", "State servant", "Student"],
         )
-        income_total = st.number_input("Annual income (R)", min_value=1.0, value=180_000.0, step=10_000.0)
+        income_total = st.number_input(
+            "Annual income (R)", min_value=1.0, value=180_000.0, step=10_000.0
+        )
         education = st.selectbox(
             "Education",
-            ["Secondary / secondary special", "Higher education", "Incomplete higher",
-             "Lower secondary", "Academic degree"],
+            [
+                "Secondary / secondary special",
+                "Higher education",
+                "Incomplete higher",
+                "Lower secondary",
+                "Academic degree",
+            ],
         )
         occupation = st.text_input("Occupation (optional)", value="")
 
     with col3:
         st.subheader("Loan")
         contract_type = st.selectbox("Loan type", ["Cash loans", "Revolving loans"])
-        credit_amount = st.number_input("Credit amount (R)", min_value=1.0, value=450_000.0, step=10_000.0)
+        credit_amount = st.number_input(
+            "Credit amount (R)", min_value=1.0, value=450_000.0, step=10_000.0
+        )
         annuity = st.number_input("Monthly annuity (R)", min_value=1.0, value=22_500.0, step=500.0)
         owns_car = st.checkbox("Owns a car")
         owns_realty = st.checkbox("Owns property")
@@ -125,7 +146,9 @@ if submitted:
         # the API always uses the configured DEFAULT_LGD — recompute ECL locally if the sidebar
         # LGD differs, so the slider actually does something even when the API is reachable
         if abs(lgd - result["lgd_assumption"]) > 1e-9:
-            result["expected_credit_loss"] = round(result["probability_of_default"] * lgd * credit_amount, 2)
+            result["expected_credit_loss"] = round(
+                result["probability_of_default"] * lgd * credit_amount, 2
+            )
             result["lgd_assumption"] = lgd
     else:
         st.info("API unreachable — scoring directly against the saved model artifacts instead.")
@@ -151,12 +174,20 @@ if submitted:
         plt.close(fig)
 
         if decision == "approve":
-            st.success(f"**APPROVE** — PD {pd_estimate:.1%} is below the {result['decision_threshold']:.0%} cutoff")
+            st.success(
+                f"**APPROVE** — PD {pd_estimate:.1%} is below the {result['decision_threshold']:.0%} cutoff"
+            )
         else:
-            st.error(f"**DECLINE** — PD {pd_estimate:.1%} is at or above the {result['decision_threshold']:.0%} cutoff")
+            st.error(
+                f"**DECLINE** — PD {pd_estimate:.1%} is at or above the {result['decision_threshold']:.0%} cutoff"
+            )
 
-        st.metric("Expected credit loss (12-month, Stage 1)", f"R{result['expected_credit_loss']:,.2f}")
-        st.caption(f"ECL = PD x LGD ({result['lgd_assumption']:.0%}) x credit amount (R{credit_amount:,.0f})")
+        st.metric(
+            "Expected credit loss (12-month, Stage 1)", f"R{result['expected_credit_loss']:,.2f}"
+        )
+        st.caption(
+            f"ECL = PD x LGD ({result['lgd_assumption']:.0%}) x credit amount (R{credit_amount:,.0f})"
+        )
 
     with right:
         st.subheader("Why the model said this")
@@ -173,4 +204,6 @@ if submitted:
             st.pyplot(fig, bbox_inches="tight")
             plt.close(fig)
         except FileNotFoundError:
-            st.caption("Local model artifacts unavailable — waterfall plot needs `python -m src.train_lgbm` run once.")
+            st.caption(
+                "Local model artifacts unavailable — waterfall plot needs `python -m src.train_lgbm` run once."
+            )
