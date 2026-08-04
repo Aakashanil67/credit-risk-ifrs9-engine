@@ -15,6 +15,10 @@ mlruns/
 mlartifacts/
 *.pkl
 *.joblib
+# ...except the small (<1MB) trained artifacts Render/Streamlit Cloud need at deploy time — these
+# are learned model parameters, not the Kaggle dataset itself, so committing them doesn't run into
+# Kaggle's data-redistribution restriction the way committing data/ would.
+!models/*.joblib
 
 # Python
 __pycache__/
