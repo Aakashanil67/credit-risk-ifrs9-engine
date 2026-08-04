@@ -1,0 +1,39 @@
+# virtual environment
+.venv/
+venv/
+
+# data — never commit raw or processed data
+data/
+*.csv
+
+# secrets
+.env
+*.env.local
+
+# experiment tracking / model artifacts
+mlruns/
+mlartifacts/
+*.pkl
+*.joblib
+
+# Python
+__pycache__/
+*.pyc
+.pytest_cache/
+.ruff_cache/
+*.egg-info/
+
+# notebooks
+.ipynb_checkpoints/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# editor
+.vscode/
+
+# personal planning docs, not part of the shipped project
+*.pdf
+Project 1 - AUTOPILOT - Credit Risk & IFRS 9 Engine.md
+
