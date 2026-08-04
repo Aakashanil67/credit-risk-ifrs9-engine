@@ -20,7 +20,11 @@ Running context for this repo. Updated after each build step, not just at the en
 - 2026-08-04 — Environment set up: Python 3.12.10 in `.venv`, all pinned deps installed (see `requirements.txt`). GitHub CLI installed and authenticated as `Aakashanil67`.
 - 2026-08-04 — Dataset: `data/application_train.csv` downloaded from Kaggle (Home Credit Default Risk), 307,511 rows × 122 columns. Gitignored, never committed.
 - 2026-08-04 — GitHub repo created: `github.com/Aakashanil67/credit-risk-ifrs9-engine`, public.
-- 2026-08-04 — Skeleton in place (this commit). Nothing modeled yet.
+- 2026-08-04 — Skeleton in place. Nothing modeled yet.
+- 2026-08-04 — Data loader, EDA (5 findings, 3 figures), leakage-safe 60/20/20 split + imputation, logistic baseline (AUC 0.7326), LightGBM (AUC 0.7565, Gini 0.5129, KS 0.3794, beats baseline on all three), MLflow tracking with 4 logged runs (`run_experiments.py`) — all done and pushed.
+- 2026-08-04 — Statsmodels 0.14.4 needs scipy pinned to 1.13.1 (newer scipy dropped `_lazywhere` from the import path statsmodels 0.14.4 uses) — pinned in `requirements.txt`, don't let scipy drift to latest.
+- 2026-08-04 — `optbinning.BinningProcess`/`Scorecard` segfault unconditionally on this machine (reproduced on synthetic data down to 2 numeric columns) — root cause is `optbinning`'s default CP-SAT solver hitting a broken `LinearExpr.__radd__` overload in the installed `ortools` version, occasionally crashing the process instead of raising. Worked around by calling `OptimalBinning(..., solver="mip")` per feature directly (`src/scorecard.py`) instead of the higher-level orchestrator, and computing the PDO points table by hand. Separately — and this one cost real debugging time — the crash also depends on **import order**: `numpy`/`pandas` imported before `optbinning` reliably segfaults even with `solver="mip"`; `optbinning` imported first is reliably fine. `src/scorecard.py` imports `optbinning` before `numpy`/`pandas` for this reason — don't reorder it.
+- 2026-08-04 — In `optbinning`'s `BinningTable.build()` output, the `"Totals"` summary row is the **index label**, not the value of the `Bin` column (`Bin` is `''` for that row) — filter on the index, not `row["Bin"] == "Totals"`.
 
 ## Decisions log
 
