@@ -10,6 +10,7 @@ ask for:
   their existing scorecard's KS without knowing what AUC means.
 """
 
+import joblib
 import lightgbm as lgb
 import mlflow
 import mlflow.lightgbm
@@ -20,7 +21,14 @@ from sklearn.metrics import roc_auc_score
 from sklearn.model_selection import StratifiedKFold
 
 from src.baseline import run_and_log as run_baseline
-from src.config import MLFLOW_EXPERIMENT_NAME, RANDOM_SEED, REPORTS_DIR, TARGET_COL
+from src.config import (
+    LGBM_MODEL_PATH,
+    MLFLOW_EXPERIMENT_NAME,
+    MODELS_DIR,
+    RANDOM_SEED,
+    REPORTS_DIR,
+    TARGET_COL,
+)
 from src.data_loader import load_application_data
 from src.preprocessing import split_data
 
@@ -104,8 +112,8 @@ def train_and_log_variant(
     val_y: pd.Series,
     params: dict,
     run_name: str,
-) -> tuple[dict[str, float], int]:
-    """Fit one LightGBM variant, log it to MLflow, return its validation metrics and stopping iteration."""
+) -> tuple[dict[str, float], int, lgb.LGBMClassifier]:
+    """Fit one LightGBM variant, log it to MLflow, return its validation metrics, stopping iteration, and the model."""
     mlflow.set_experiment(MLFLOW_EXPERIMENT_NAME)
     with mlflow.start_run(run_name=run_name):
         mlflow.log_params(params)
@@ -114,7 +122,7 @@ def train_and_log_variant(
         mlflow.log_param("best_iteration", model.best_iteration_)
         mlflow.log_metrics({k.lower(): v for k, v in metrics.items()})
         mlflow.lightgbm.log_model(model, "model")
-    return metrics, model.best_iteration_
+    return metrics, model.best_iteration_, model
 
 
 def write_comparison(baseline: dict, lgbm: dict, best_params: dict, best_iteration: int, out_path) -> None:
@@ -147,10 +155,14 @@ def main() -> None:
     best_params = cv_select_params(train_X, train_y)
     print(f"selected {best_params}")
 
-    lgbm_metrics, best_iteration = train_and_log_variant(
+    lgbm_metrics, best_iteration, model = train_and_log_variant(
         train_X, train_y, val_X, val_y, best_params, run_name="lgbm_tuned"
     )
     print(f"LightGBM validation: {lgbm_metrics}")
+
+    MODELS_DIR.mkdir(parents=True, exist_ok=True)
+    joblib.dump(model, LGBM_MODEL_PATH)
+    print(f"saved tuned model to {LGBM_MODEL_PATH}")
 
     baseline_metrics, _model, _pred = run_baseline(train, val)
     print(f"baseline validation: {baseline_metrics}")
