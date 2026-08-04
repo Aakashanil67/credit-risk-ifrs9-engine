@@ -39,8 +39,8 @@ from src.config import (
 )
 from src.data_loader import load_application_data
 from src.explain import load_or_train_model
+from src.features import build_lgbm_features
 from src.preprocessing import split_data
-from src.train_lgbm import build_lgbm_features
 
 CREDIT_IMPAIRED_PD_THRESHOLD = 0.5  # Stage 3 if the model gives default better than even odds
 MIN_TERM_MONTHS = 12
