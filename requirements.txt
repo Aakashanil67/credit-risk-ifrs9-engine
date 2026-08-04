@@ -3,7 +3,6 @@ numpy==1.26.4
 scipy==1.13.1
 scikit-learn==1.5.2
 lightgbm==4.5.0
-xgboost==2.1.2
 optbinning==0.19.0
 shap==0.46.0
 statsmodels==0.14.4
