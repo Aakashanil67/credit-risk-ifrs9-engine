@@ -11,8 +11,9 @@ A probability-of-default model on 307,511 real Home Credit loan applications, wi
 scorecard, SHAP reason codes, and an IFRS 9 staged ECL calculator, shipped as a FastAPI service
 and a Streamlit decision dashboard.
 
-Not deployed to a public URL yet: see [Status](#status). Everything below runs locally or via
-Docker Compose.
+**Live**: [dashboard](https://credit-risk-ifrs9-engine.streamlit.app) · [API docs](https://credit-risk-api-92it.onrender.com/docs).
+Render's free tier spins down on inactivity, so the first request after a while can take a few
+seconds to wake up. Everything below also runs locally or via Docker Compose.
 
 ## The problem
 
@@ -159,13 +160,15 @@ there's no Kaggle data in CI). Lint: `ruff check . && ruff format --check .`. Pr
 
 ## Status
 
-Built and tested locally end to end (dataset, model, scorecard, SHAP, ECL, API, dashboard), all
-pushed with green CI, including a Docker build check that runs on every push. What's not done:
+Built and tested end to end (dataset, model, scorecard, SHAP, ECL, API, dashboard), pushed with
+green CI including a Docker build check on every push, run through Docker Compose locally
+(container-to-container networking confirmed, not just the individual image builds), and deployed
+live: the API on Render, the dashboard on Streamlit Community Cloud. What's not done:
 
-- **No public deployment.** Render/Streamlit Community Cloud need their own accounts and a manual
-  deploy step this repo doesn't automate.
-- **`docker compose up` is CI-validated (both images build clean on every push) but not run
-  end-to-end locally**, since there's no Docker Desktop on the machine this was built on.
+- **The deployed dashboard scores against its local model fallback, not the live API.** No
+  `API_URL` secret is set on Streamlit Cloud pointing at the Render URL, so it takes the same
+  code path the README's "runs standalone without the API" design decision was built for. Both
+  paths use the identical model artifacts and return identical predictions.
 - **Gender is used as a direct model feature** (see the Fairness check under Results above).
   Removing it doesn't remove the disparity on its own, since income, occupation and region can
   reconstruct much of the same signal; this needs a real disparate-impact review before any

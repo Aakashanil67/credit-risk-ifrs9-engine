@@ -12,8 +12,9 @@ Running context for this repo. Updated after each build step, not just at the en
 - `src/scorecard.py` — optbinning WoE/IV scorecard.
 - `src/explain.py` — SHAP global + per-applicant, `reason_codes()`, calibration curve/Brier score.
 - `src/ecl.py` — IFRS 9 staged ECL (`PD × LGD × EAD`, Stage 1/2/3 via SICR = PD doubled since origination).
-- `api/main.py` — FastAPI `/predict` (PD, decision, reason codes, ECL) + `/health`.
-- `app/dashboard.py` — Streamlit UI, calls the API with a local-model fallback.
+- `src/features.py` — `build_lgbm_features()`, split out of `src/train_lgbm.py` so the serving path doesn't transitively import training-only packages (statsmodels, mlflow, optbinning). Both `src/train_lgbm.py` and `src/explain.py`/`src/ecl.py` import from here now.
+- `api/main.py` — FastAPI `/predict` (PD, decision, reason codes, ECL) + `/health`. Live at `https://credit-risk-api-92it.onrender.com`.
+- `app/dashboard.py` — Streamlit UI, calls the API with a local-model fallback. `app/requirements.txt` is a serving-only dependency subset for Streamlit Community Cloud (see State log). Live at `https://credit-risk-ifrs9-engine.streamlit.app`.
 
 ## State
 
@@ -25,6 +26,7 @@ Running context for this repo. Updated after each build step, not just at the en
 - 2026-08-04 — Credit scorecard (`src/scorecard.py`, WoE/IV per feature computed manually via `OptimalBinning(solver="mip")`, PDO points table, EXT_SOURCE_2/3 the strongest IV at ~0.32 each), SHAP explainability (`src/explain.py`, global beeswarm/bar + per-applicant waterfall + `reason_codes()`), IFRS 9 staged ECL (`src/ecl.py`, portfolio EAD R36.75B / ECL R1.33B / coverage 3.614%, monotonic coverage by stage 3.2%→10.5%→32.0%) — all done, tested, and pushed.
 - 2026-08-04 — Calibration + model card (Brier 0.0678, real gender fairness check: F 72.6% vs M 56.9% approval rate at the 8% cutoff — flagged, not hidden), FastAPI `/predict` (`api/main.py` + `api/scoring.py` shared with the dashboard, clean `field: message` 422 errors), Streamlit dashboard (`app/dashboard.py`, live-API-with-fallback verified in a real browser both ways), Dockerfiles + compose (untested locally — no Docker Desktop — but CI's `docker-build` job builds both images clean on every push, so they're real-verified even without local Docker), hardening (38 tests, pre-commit with ruff, edge cases, CI-skip guard for `test_api.py` when `models/` isn't present), recruiter-grade README — all done, tested, and pushed. Full 20-day AUTOPILOT scope is complete except deployment (see README Status section).
 - 2026-08-04 — Docker Desktop installed; `docker compose up --build` run for real for the first time: both containers built and started, `curl localhost:8000/predict` returned a real prediction, and the dashboard scored an applicant showing "Scored via live API (http://api:8000)" — confirms the compose service-name DNS resolution and the full container-to-container network path actually work, not just the individual image builds CI already checked. Committed `models/*.joblib` (~944KB total) to the repo (previously gitignored) since Render/Streamlit Cloud deploy from a fresh checkout with no way to run training first — these are learned parameters, not the Kaggle dataset, so this doesn't run into Kaggle's redistribution restriction. Render Web Service `credit-risk-api` configured (Docker, `api/Dockerfile`, Free tier, `PORT=8000`, GitHub App scoped to just this repo) but blocked on Render's payment-card verification requirement — flagged to the user, not bypassed.
+- 2026-08-04 — **Both services deployed live.** User added a card on Render (their own action, not mine) and confirmed; Render's first deploy attempt then failed at startup with `FileNotFoundError: Missing model artifacts` — root cause: neither Dockerfile had `COPY models/ models/`, they relied entirely on `docker-compose.yml`'s volume mount, which doesn't exist on a platform that just builds the Dockerfile directly with no host filesystem. Fixed both Dockerfiles, verified locally with a standalone `docker build`+`docker run` (no compose, no volume — same conditions as Render), pushed (`d29b459`), Render auto-redeployed successfully. `curl https://credit-risk-api-92it.onrender.com/health` → `{"status":"ok","model_loaded":true}`, and a full `/predict` call returns the identical prediction (PD 0.0835, decline, ECL R16,910) seen in every other environment (local venv, local Docker, Docker Compose). Separately, Streamlit Community Cloud's build failed with `uv`'s resolver reporting no solution for `optbinning`'s `ortools>=9.4` (needs `numpy>=2.0.2`) against this repo's `numpy==1.26.4` pin — root cause was `api/scoring.py` -> `src.explain` -> (then) `src.train_lgbm` -> `src.baseline` transitively importing statsmodels/mlflow/optbinning at module load, even though the dashboard never calls into any of it. Fixed for real, not worked around: split `build_lgbm_features()` out into `src/features.py` (new file) so `src/explain.py`/`src/ecl.py` import from there instead of `src/train_lgbm.py`, breaking the transitive chain (`python -c "import api.scoring"` then shows zero statsmodels/mlflow/optbinning/ortools/cvxpy modules loaded). Also added `app/requirements.txt` — Streamlit Cloud reads a requirements.txt from the app's own directory in preference to repo root — a lean serving-only subset (no optbinning/statsmodels/mlflow/pytest/ruff). Rebuild succeeded (`uv` resolved 68 packages cleanly this time) and the app is live at `https://credit-risk-ifrs9-engine.streamlit.app`.
 - 2026-08-04 — Statsmodels 0.14.4 needs scipy pinned to 1.13.1 (newer scipy dropped `_lazywhere` from the import path statsmodels 0.14.4 uses) — pinned in `requirements.txt`, don't let scipy drift to latest.
 - 2026-08-04 — `optbinning.BinningProcess`/`Scorecard` segfault unconditionally on this machine (reproduced on synthetic data down to 2 numeric columns) — root cause is `optbinning`'s default CP-SAT solver hitting a broken `LinearExpr.__radd__` overload in the installed `ortools` version, occasionally crashing the process instead of raising. Worked around by calling `OptimalBinning(..., solver="mip")` per feature directly (`src/scorecard.py`) instead of the higher-level orchestrator, and computing the PDO points table by hand. Separately — and this one cost real debugging time — the crash also depends on **import order**: `numpy`/`pandas` imported before `optbinning` reliably segfaults even with `solver="mip"`; `optbinning` imported first is reliably fine. `src/scorecard.py` imports `optbinning` before `numpy`/`pandas` for this reason — don't reorder it.
 - 2026-08-04 — In `optbinning`'s `BinningTable.build()` output, the `"Totals"` summary row is the **index label**, not the value of the `Bin` column (`Bin` is `''` for that row) — filter on the index, not `row["Bin"] == "Totals"`.
@@ -37,16 +39,19 @@ Running context for this repo. Updated after each build step, not just at the en
 
 ## Known issues / deferred
 
-- `requirements.txt` drags training-only packages (statsmodels, mlflow, scipy, optbinning) into
-  the serving images because `api/scoring.py` imports `src.explain` -> `src.train_lgbm` ->
-  `src.baseline`, and Python executes that whole import chain at module load even though the API
-  only calls a few functions from it. A serving-only import path would shrink the image; not done
-  since it touches several modules for a size win, not a correctness one.
-- Render blocks free-tier Web Service deploys behind a payment-card verification step (their
-  anti-abuse measure, not a Render pricing change on our side) — declined to enter card details
-  on the user's behalf per policy; needs the user to add a card themselves in the Render
-  dashboard before the `credit-risk-api` service (already configured: Docker runtime,
-  `api/Dockerfile`, Free instance, `PORT=8000`) can actually deploy.
+- Root `requirements.txt` still drags training-only packages (statsmodels, mlflow, scipy,
+  optbinning) into the Docker images — fine there since those run on Python 3.12-slim and never
+  hit the numpy/ortools resolver conflict, and CI validates both images build clean on every
+  push. Only the Streamlit Cloud path needed trimming (`app/requirements.txt`), since that
+  platform's `uv` resolver is what actually failed.
+- No `API_URL` secret set on Streamlit Community Cloud, so the deployed dashboard always uses its
+  local-model fallback rather than calling the live Render API — `app/dashboard.py`'s default
+  (`http://localhost:8000`) doesn't resolve on Streamlit Cloud's infrastructure. Both paths score
+  identically (same model artifacts), so this doesn't affect correctness, just which code path
+  runs. Could be fixed by setting `API_URL=https://credit-risk-api-92it.onrender.com` as a
+  Streamlit Cloud secret if demoing the live-API path specifically matters.
+- Render's free tier spins down on inactivity — first request after idle will be slow (cold
+  start) before the model loads.
 
 ## Environment notes
 
