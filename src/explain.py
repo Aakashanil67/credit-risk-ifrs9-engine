@@ -12,8 +12,10 @@ import numpy as np
 import pandas as pd
 import shap
 from matplotlib import pyplot as plt
+from sklearn.calibration import calibration_curve
+from sklearn.metrics import brier_score_loss
 
-from src.config import FIGURES_DIR, LGBM_MODEL_PATH, RANDOM_SEED
+from src.config import FIGURES_DIR, LGBM_MODEL_PATH, RANDOM_SEED, TARGET_COL
 from src.data_loader import load_application_data
 from src.preprocessing import split_data
 from src.train_lgbm import build_lgbm_features
@@ -102,6 +104,34 @@ def reason_codes(
     return sentences
 
 
+def calibration_summary(y_true: pd.Series, y_pred: np.ndarray, n_bins: int = 10) -> dict:
+    """How well predicted PDs match observed default rates — separate question from discrimination.
+
+    AUC/Gini/KS measure whether the model *ranks* risky applicants above safe ones; calibration
+    measures whether a predicted PD of, say, 20% actually corresponds to roughly 20% of those
+    applicants defaulting. A model can rank perfectly (AUC 1.0) while being badly calibrated
+    (e.g. every prediction off by a constant factor) — IFRS 9 ECL depends on calibration, not
+    just ranking, because ECL = PD x LGD x EAD uses the raw PD value, not its rank.
+    """
+    observed, predicted = calibration_curve(y_true, y_pred, n_bins=n_bins, strategy="quantile")
+    brier = brier_score_loss(y_true, y_pred)
+    return {"observed": observed, "predicted": predicted, "brier_score": brier}
+
+
+def plot_calibration_curve(calibration: dict, out_path) -> None:
+    fig, ax = plt.subplots(figsize=(5, 5))
+    ax.plot(calibration["predicted"], calibration["observed"], marker="o", color="#2a6f97",
+            label=f"LightGBM (Brier={calibration['brier_score']:.4f})")
+    ax.plot([0, 1], [0, 1], linestyle="--", color="gray", label="perfectly calibrated")
+    ax.set_xlabel("predicted PD (bin mean)")
+    ax.set_ylabel("observed default rate (bin mean)")
+    ax.set_title("Calibration — predicted vs observed default rate")
+    ax.legend()
+    fig.tight_layout()
+    fig.savefig(out_path, dpi=120)
+    plt.close(fig)
+
+
 def main() -> None:
     df = load_application_data()
     train, val, _test = split_data(df, seed=RANDOM_SEED)
@@ -143,6 +173,12 @@ def main() -> None:
         print(f"applicant SK_ID_CURR={applicant_id} (PD={proba[row_idx]:.3f}):")
         for code in codes:
             print(f"  - {code}")
+
+    # calibration on the full validation set, not just the SHAP sample — more stable bin estimates
+    full_val_pred = model.predict_proba(val_X)[:, 1]
+    calibration = calibration_summary(val[TARGET_COL], full_val_pred)
+    plot_calibration_curve(calibration, FIGURES_DIR / "calibration_curve.png")
+    print(f"Brier score: {calibration['brier_score']:.4f}")
 
 
 if __name__ == "__main__":
