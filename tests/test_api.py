@@ -166,7 +166,28 @@ def test_predict_accepts_missing_optional_bureau_and_car_fields(client: TestClie
     }
     response = client.post("/predict", json=minimal)
     assert response.status_code == 200
-    assert response.json()["probability_of_default"] is not None
+
+    body = response.json()
+    assert 0.0 <= body["probability_of_default"] <= 1.0
+    assert body["expected_credit_loss"] >= 0.0
+
+
+def test_reason_codes_say_missing_not_low_for_absent_bureau_score(client: TestClient) -> None:
+    """The EXT_SOURCE_* bureau scores aren't fields on the request schema at all, so every applicant
+    scored through the API has them as NaN. They also dominate SHAP importance, which means they
+    reliably land in the top-3 reason codes. Guards the rule that a NaN feature is reported as
+    "missing" and never as "low": a first-time applicant has no bureau file, and telling them their
+    score is low is a specific false claim about a real person's credit history."""
+    response = client.post("/predict", json=VALID_APPLICANT)
+    assert response.status_code == 200
+
+    reasons = response.json()["reason_codes"]
+    bureau_reasons = [r for r in reasons if "credit bureau score" in r]
+    assert bureau_reasons, f"expected a bureau-score reason in the top 3, got {reasons}"
+    for reason in bureau_reasons:
+        assert reason.lower().startswith(
+            "missing"
+        ), f"NaN bureau score described as a measured value: {reason!r}"
 
 
 def test_predict_rejects_wrong_type_for_numeric_field(client: TestClient) -> None:
