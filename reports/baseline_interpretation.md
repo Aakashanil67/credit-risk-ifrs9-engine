@@ -1,20 +1,20 @@
 # Logistic regression baseline
 
-Validation AUC: **0.7326**. Trained on 15 hand-picked, interpretable features — not the full 122-column table LightGBM gets later.
+Validation AUC: **0.7326**, on 15 hand-picked interpretable features rather than the full 122-column table LightGBM gets later.
 
 ## Reading the coefficients
 
 Each odds ratio is how much an applicant's odds of default multiply by for a one-unit increase in that feature, holding everything else fixed. An odds ratio above 1 raises default risk; below 1 lowers it.
 
-Caveat: features aren't standardised, so 'one unit' means very different things across rows — a one-unit move in `REGION_POPULATION_RELATIVE` (range ~0-0.07) spans nearly its whole distribution, while a one-unit move in `AMT_CREDIT` (rand) is negligible, which is why its odds ratio rounds to 1.0000 even though the coefficient is real and significant. Compare effect sizes within a feature's own range, not across features by raw odds ratio.
+Caveat: features aren't standardised, so 'one unit' means very different things across rows. A one-unit move in `REGION_POPULATION_RELATIVE` (range ~0-0.07) spans nearly its whole distribution, while a one-unit move in `AMT_CREDIT` (rand) is negligible, which is why its odds ratio rounds to 1.0000 even though the coefficient is real and significant. Compare effect sizes within a feature's own range, not across features by raw odds ratio.
 
 ## Top 5 statistically significant drivers
 
-- **REGION_POPULATION_RELATIVE**: odds ratio 0.035 (p=3.52e-06). Each one-unit increase decreases the odds of default by 96.5%.
-- **EXT_SOURCE_3**: odds ratio 0.071 (p=0.00e+00). Each one-unit increase decreases the odds of default by 92.9%.
-- **EXT_SOURCE_2**: odds ratio 0.106 (p=0.00e+00). Each one-unit increase decreases the odds of default by 89.4%.
-- **EXT_SOURCE_1**: odds ratio 0.299 (p=1.99e-69). Each one-unit increase decreases the odds of default by 70.1%.
-- **is_male**: odds ratio 1.471 (p=3.06e-84). Each one-unit increase increases the odds of default by 47.1%.
+- `REGION_POPULATION_RELATIVE` has an odds ratio of 0.035 (p=3.52e-06), so a one-unit increase decreases the odds of default by 96.5%.
+- `EXT_SOURCE_3` has an odds ratio of 0.071 (p=0.00e+00), so a one-unit increase decreases the odds of default by 92.9%.
+- `EXT_SOURCE_2` has an odds ratio of 0.106 (p=0.00e+00), so a one-unit increase decreases the odds of default by 89.4%.
+- `EXT_SOURCE_1` has an odds ratio of 0.299 (p=1.99e-69), so a one-unit increase decreases the odds of default by 70.1%.
+- `is_male` has an odds ratio of 1.471 (p=3.06e-84), so a one-unit increase increases the odds of default by 47.1%.
 
 ## Full coefficient table
 

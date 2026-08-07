@@ -6,15 +6,15 @@
 
 ## Five findings
 
-1. **Missingness is structural, not random.** 67 of 122 columns have missing values, and the worst (COMMONAREA_MEDI) is missing 69.87% of the time. These are almost all building/apartment features that only exist for applicants who reported living in an apartment complex — missing is informative, not a data-entry gap, which argues against dropping the columns.
+1. **Missingness is structural, not random.** 67 of 122 columns have missing values, and the worst (COMMONAREA_MEDI) is missing 69.87% of the time. These are almost all building/apartment features that only exist for applicants who reported living in an apartment complex, so missing is informative rather than a data-entry gap. That argues against dropping them.
 
 2. **`DAYS_EMPLOYED` has a sentinel-value bug.** 18.0% of rows carry the value 365243 (1,000 years), which is Home Credit's placeholder for 'not currently employed', not a real employment tenure. Left untreated it wrecks any model that uses employment length linearly.
 
-3. **The three `EXT_SOURCE_*` columns dominate the correlation table.** EXT_SOURCE_3 correlates -0.179 with `TARGET`, more than any engineered feature in this table — they're external credit-bureau scores, and the model will lean on them heavily.
+3. **The three `EXT_SOURCE_*` columns dominate the correlation table.** EXT_SOURCE_3 correlates -0.179 with `TARGET`, more than any engineered feature in this table. They're external credit-bureau scores, and the model will lean on them heavily.
 
 4. **Income and credit amount are heavily right-skewed.** A handful of applicants report incomes in the tens of millions; the histograms clip at the 99th percentile so the bulk of the distribution is visible at all. Tree models handle this natively, but the logistic baseline will need a log transform.
 
-5. **`DAYS_BIRTH` correlates 0.078 with `TARGET`** — younger applicants default more often, consistent with less credit history to underwrite against, not a causal age effect the model should be read as endorsing.
+5. **`DAYS_BIRTH` correlates 0.078 with `TARGET`.** Younger applicants default more often, which is consistent with having less credit history to underwrite against. It is not a causal age effect and shouldn't be read as one.
 
 ## Top correlations with TARGET
 

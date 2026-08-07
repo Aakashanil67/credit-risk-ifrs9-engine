@@ -1,8 +1,8 @@
-# Data dictionary — application_train.csv
+# Data dictionary: application_train.csv
 
 307,511 rows, 122 columns. One row is one loan application; `TARGET` is 1 if the client had a payment more than X days late on at least one installment (Home Credit's definition of default), 0 otherwise.
 
-Target balance: 91.9% repaid, 8.1% defaulted — a 11.4:1 imbalance. Accuracy is meaningless here: a model that predicts 'repaid' for every applicant scores 91.9% accuracy while catching zero defaults.
+Target balance: 91.9% repaid against 8.1% defaulted, a 11.4:1 imbalance. Accuracy is meaningless here: a model that predicts 'repaid' for every applicant scores 91.9% accuracy while catching zero defaults.
 
 ## Missing values (67 of 122 columns affected)
 
