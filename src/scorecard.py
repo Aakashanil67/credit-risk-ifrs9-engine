@@ -10,11 +10,11 @@ number per feature summarising how much separating power it has. Rule of thumb u
 industry: IV < 0.02 useless, 0.02-0.1 weak, 0.1-0.3 medium, 0.3-0.5 strong, > 0.5 suspiciously
 strong (often a leak).
 
-Binning is fit one variable at a time with optbinning's `OptimalBinning(solver="mip")` — the
-higher-level `BinningProcess`/`Scorecard` orchestrator segfaults on this machine's ortools build
-(its default CP-SAT solver path hits a broken `LinearExpr.__radd__` overload — see CLAUDE.md).
-Fitting each variable directly and doing the WoE regression + PDO points math by hand sidesteps
-that bug entirely and is the same computation `Scorecard` would have done internally.
+Binning is fit one variable at a time with optbinning's `OptimalBinning(solver="mip")`. The
+higher-level `BinningProcess`/`Scorecard` orchestrator segfaults on this machine's ortools build:
+its default CP-SAT solver path hits a broken `LinearExpr.__radd__` overload (see DECISIONS.md).
+Fitting each variable directly and doing the WoE regression and PDO points maths by hand sidesteps
+that bug entirely, and is the same computation `Scorecard` would have run internally.
 
 Points come from PDO scaling (points-to-double-odds): a chosen baseline score corresponds to a
 chosen good:bad odds, and every `pdo` points added doubles the odds of being good.

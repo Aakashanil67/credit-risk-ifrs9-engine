@@ -143,11 +143,10 @@ there's no Kaggle data in CI). Lint: `ruff check . && ruff format --check .`. Pr
 - **IFRS 9 SICR staging compares two different models' PDs for the same applicant**, not one
   loan's PD over real time, because the Kaggle data is a single snapshot with no repeat
   observations. Documented as a proxy in `reports/ifrs9_summary.md`, not hidden.
-- **`optbinning`'s `BinningProcess`/`Scorecard` orchestrator segfaults on this machine.** Root
-  cause: a broken `ortools` CP-SAT overload plus an import-order sensitivity that cost real
-  debugging time (see `CLAUDE.md`). Worked around by driving `OptimalBinning(solver="mip")`
-  directly per feature and computing the PDO points table by hand instead of trusting the
-  higher-level API.
+- **`optbinning`'s `BinningProcess`/`Scorecard` orchestrator segfaults on this machine.** Two
+  causes, stacked: a broken `ortools` CP-SAT overload, and an import-order sensitivity that ate
+  most of a debugging session before I found it (see `DECISIONS.md`). I drive
+  `OptimalBinning(solver="mip")` per feature instead and compute the PDO points table by hand.
 - **Model artifacts (`models/*.joblib`, ~944KB) are committed to git and baked into both Docker
   images.** They're learned parameters, not the Kaggle dataset, so this doesn't run into Kaggle's
   redistribution restriction. `docker-compose.yml` also volume-mounts a host `models/` over the
@@ -161,9 +160,10 @@ there's no Kaggle data in CI). Lint: `ruff check . && ruff format --check .`. Pr
 ## Status
 
 Built and tested end to end (dataset, model, scorecard, SHAP, ECL, API, dashboard), pushed with
-green CI including a Docker build check on every push, run through Docker Compose locally
-(container-to-container networking confirmed, not just the individual image builds), and deployed
-live: the API on Render, the dashboard on Streamlit Community Cloud. What's not done:
+green CI including a Docker build check on every push, and deployed live: the API on Render, the
+dashboard on Streamlit Community Cloud. I also ran it through Docker Compose locally to confirm
+container-to-container networking actually resolves, which CI's per-image build check never
+exercises. What's not done:
 
 - **The deployed dashboard scores against its local model fallback, not the live API.** No
   `API_URL` secret is set on Streamlit Cloud pointing at the Render URL, so it takes the same

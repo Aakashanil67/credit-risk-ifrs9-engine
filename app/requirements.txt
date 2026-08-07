@@ -1,11 +1,9 @@
-# Streamlit Community Cloud reads a requirements.txt from the app's own directory before falling
-# back to the repo root — this is that file. Deliberately a subset of the root requirements.txt:
-# just what app/dashboard.py's import chain (api.scoring -> src.explain -> src.features/config/
-# data_loader/preprocessing) actually needs at runtime. Training-only packages (statsmodels,
-# mlflow, optbinning and its ortools/cvxpy solver stack, pytest, ruff, ipykernel) are left out on
-# purpose: optbinning's ortools dependency requires numpy>=2.0.2, which conflicts with the
-# numpy==1.26.4 pin below and made the platform's dependency resolver fail outright before this
-# file existed. See CLAUDE.md decisions log.
+# Streamlit Community Cloud prefers a requirements.txt in the app's own directory over the repo
+# root, so this is the one it reads. It's a deliberate subset: only what app/dashboard.py's import
+# chain (api.scoring -> src.explain -> src.features/config/data_loader/preprocessing) needs at
+# runtime. Training-only packages are left out on purpose. optbinning drags in ortools, which wants
+# numpy>=2.0.2 and collides with the numpy==1.26.4 pin below; before this file existed that
+# collision made the platform's resolver give up entirely. See DECISIONS.md.
 pandas==2.2.3
 numpy==1.26.4
 scipy==1.13.1

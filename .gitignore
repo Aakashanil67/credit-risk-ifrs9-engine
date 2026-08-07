@@ -34,9 +34,8 @@ __pycache__/
 .DS_Store
 Thumbs.db
 
-# editor
-.vscode/
-.claude/
+# Editor and tool state live in ~/.gitignore_global, not here — they're a property of
+# my machine, not of this project, and every contributor would need a different set.
 
 # personal planning docs, not part of the shipped project
 *.pdf
