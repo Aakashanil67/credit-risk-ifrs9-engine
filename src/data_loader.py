@@ -32,14 +32,15 @@ def missing_value_report(df: pd.DataFrame) -> pd.DataFrame:
 def write_data_dictionary(df: pd.DataFrame, missing: pd.DataFrame, out_path: Path) -> None:
     balance = target_balance(df)
     lines = [
-        "# Data dictionary — application_train.csv",
+        "# Data dictionary: application_train.csv",
         "",
         f"{df.shape[0]:,} rows, {df.shape[1]} columns. One row is one loan application; "
         f"`{TARGET_COL}` is 1 if the client had a payment more than X days late on at "
         "least one installment (Home Credit's definition of default), 0 otherwise.",
         "",
-        f"Target balance: {balance['repaid (0)']:.1%} repaid, {balance['defaulted (1)']:.1%} "
-        f"defaulted — a {balance['repaid (0)'] / balance['defaulted (1)']:.1f}:1 imbalance. "
+        f"Target balance: {balance['repaid (0)']:.1%} repaid against "
+        f"{balance['defaulted (1)']:.1%} defaulted, "
+        f"a {balance['repaid (0)'] / balance['defaulted (1)']:.1f}:1 imbalance. "
         "Accuracy is meaningless here: a model that predicts 'repaid' for every applicant "
         f"scores {balance['repaid (0)']:.1%} accuracy while catching zero defaults.",
         "",

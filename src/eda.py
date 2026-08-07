@@ -89,8 +89,8 @@ def write_eda_summary(df: pd.DataFrame, missing: pd.DataFrame, corr: pd.Series, 
         f"1. **Missingness is structural, not random.** {len(missing)} of {df.shape[1]} columns "
         f"have missing values, and the worst ({missing.index[0]}) is missing "
         f"{missing.iloc[0]['missing_pct']}% of the time. These are almost all building/apartment "
-        "features that only exist for applicants who reported living in an apartment complex — "
-        "missing is informative, not a data-entry gap, which argues against dropping the columns.",
+        "features that only exist for applicants who reported living in an apartment complex, so "
+        "missing is informative rather than a data-entry gap. That argues against dropping them.",
         "",
         f"2. **`DAYS_EMPLOYED` has a sentinel-value bug.** {anomaly_365243:.1%} of rows carry the "
         "value 365243 (1,000 years), which is Home Credit's placeholder for "
@@ -99,7 +99,7 @@ def write_eda_summary(df: pd.DataFrame, missing: pd.DataFrame, corr: pd.Series, 
         "",
         f"3. **The three `EXT_SOURCE_*` columns dominate the correlation table.** "
         f"{top_corr.index[0]} correlates {top_corr.iloc[0]:.3f} with `TARGET`, more than any "
-        "engineered feature in this table — they're external credit-bureau scores, and the model "
+        "engineered feature in this table. They're external credit-bureau scores, and the model "
         "will lean on them heavily.",
         "",
         "4. **Income and credit amount are heavily right-skewed.** A handful of applicants report "
@@ -107,9 +107,9 @@ def write_eda_summary(df: pd.DataFrame, missing: pd.DataFrame, corr: pd.Series, 
         "of the distribution is visible at all. Tree models handle this natively, but the logistic "
         "baseline will need a log transform.",
         "",
-        f"5. **`DAYS_BIRTH` correlates {corr.get('DAYS_BIRTH', 0):.3f} with `TARGET`** — younger "
-        "applicants default more often, consistent with less credit history to underwrite "
-        "against, not a causal age effect the model should be read as endorsing.",
+        f"5. **`DAYS_BIRTH` correlates {corr.get('DAYS_BIRTH', 0):.3f} with `TARGET`.** Younger "
+        "applicants default more often, which is consistent with having less credit history to "
+        "underwrite against. It is not a causal age effect and shouldn't be read as one.",
         "",
         "## Top correlations with TARGET",
         "",

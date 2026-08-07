@@ -105,8 +105,8 @@ def write_interpretation(table: pd.DataFrame, auc: float, out_path) -> None:
     lines = [
         "# Logistic regression baseline",
         "",
-        f"Validation AUC: **{auc:.4f}**. Trained on {len(FEATURES)} hand-picked, interpretable "
-        "features — not the full 122-column table LightGBM gets later.",
+        f"Validation AUC: **{auc:.4f}**, on {len(FEATURES)} hand-picked interpretable features "
+        "rather than the full 122-column table LightGBM gets later.",
         "",
         "## Reading the coefficients",
         "",
@@ -115,7 +115,7 @@ def write_interpretation(table: pd.DataFrame, auc: float, out_path) -> None:
         "default risk; below 1 lowers it.",
         "",
         "Caveat: features aren't standardised, so 'one unit' means very different things across "
-        "rows — a one-unit move in `REGION_POPULATION_RELATIVE` (range ~0-0.07) spans nearly its "
+        "rows. A one-unit move in `REGION_POPULATION_RELATIVE` (range ~0-0.07) spans nearly its "
         "whole distribution, while a one-unit move in `AMT_CREDIT` (rand) is negligible, which is "
         "why its odds ratio rounds to 1.0000 even though the coefficient is real and significant. "
         "Compare effect sizes within a feature's own range, not across features by raw odds ratio.",
@@ -127,8 +127,8 @@ def write_interpretation(table: pd.DataFrame, auc: float, out_path) -> None:
         direction = "increases" if row["odds_ratio"] > 1 else "decreases"
         pct_effect = abs(row["odds_ratio"] - 1) * 100
         lines.append(
-            f"- **{feat}**: odds ratio {row['odds_ratio']:.3f} (p={row['p_value']:.2e}). "
-            f"Each one-unit increase {direction} the odds of default by {pct_effect:.1f}%."
+            f"- `{feat}` has an odds ratio of {row['odds_ratio']:.3f} (p={row['p_value']:.2e}), "
+            f"so a one-unit increase {direction} the odds of default by {pct_effect:.1f}%."
         )
     lines += [
         "",

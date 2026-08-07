@@ -125,10 +125,10 @@ def portfolio_summary(ecl_df: pd.DataFrame) -> dict:
 def write_ifrs9_summary(summary: dict, lgd: float, out_path) -> None:
     by_stage = summary["by_stage"]
     lines = [
-        "# IFRS 9 expected credit loss — portfolio summary",
+        "# IFRS 9 expected credit loss: portfolio summary",
         "",
-        f"LGD assumption: {lgd:.0%} (loss given default — the share of exposure not recovered "
-        "after a default). EAD: outstanding credit amount at application (`AMT_CREDIT`).",
+        f"LGD assumption: {lgd:.0%}. Loss given default is the share of exposure not recovered "
+        "after a default. EAD is the outstanding credit amount at application (`AMT_CREDIT`).",
         "",
         f"**Total exposure (EAD): R{summary['total_ead']:,.0f}**",
         f"**Total provision (ECL): R{summary['total_ecl']:,.0f}**",
@@ -139,7 +139,7 @@ def write_ifrs9_summary(summary: dict, lgd: float, out_path) -> None:
         "| stage | loans | EAD (R) | ECL (R) | coverage % |",
         "|---|---|---|---|---|",
     ]
-    stage_names = {1: "1 — performing", 2: "2 — SICR (lifetime ECL)", 3: "3 — credit-impaired"}
+    stage_names = {1: "1 (performing)", 2: "2 (SICR, lifetime ECL)", 3: "3 (credit-impaired)"}
     for stage, row in by_stage.iterrows():
         lines.append(
             f"| {stage_names.get(stage, stage)} | {row['loans']:,.0f} | {row['ead']:,.0f} | "
@@ -149,12 +149,12 @@ def write_ifrs9_summary(summary: dict, lgd: float, out_path) -> None:
         "",
         "## Reading this in IFRS 9 language",
         "",
-        "- **Stage 1** loans get 12-month ECL — the expected loss from default events plausible "
+        "- **Stage 1** loans get 12-month ECL: the expected loss from default events plausible "
         "in the next 12 months.",
         "- **Stage 2** loans have shown a significant increase in credit risk (SICR) since "
-        "origination and move to lifetime ECL — expected loss over the full remaining term, "
-        "which is materially larger per loan than a 12-month provision.",
-        "- **Stage 3** loans are credit-impaired (PD >= 50%) — also lifetime ECL, and flagged "
+        "origination, so they move to lifetime ECL: expected loss over the full remaining "
+        "term. Per loan that is materially larger than a 12-month provision.",
+        "- **Stage 3** loans are credit-impaired (PD >= 50%). Also lifetime ECL, but flagged "
         "separately for disclosure as IFRS 9 requires.",
         "",
         "**Limitation, stated plainly**: SICR is proxied by comparing the tuned LightGBM model's "
