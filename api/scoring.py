@@ -1,54 +1,68 @@
-"""Shared scoring logic between the FastAPI service and the Streamlit dashboard's offline fallback.
+"""Scoring shared by FastAPI and the dashboard's local fallback."""
 
-Kept separate from api/main.py so the dashboard can score an applicant directly against the saved
-model artifacts (no HTTP round trip) using the exact same code path the live API uses, rather than
-a second, drifting reimplementation of the same business logic.
-"""
-
-import joblib
 import numpy as np
 import pandas as pd
 import shap
 
 from api.schemas import ApplicantRequest, PredictResponse
+from src.artifacts import load_artifact_bundle
 from src.config import (
-    CAT_DTYPES_PATH,
-    DECISION_THRESHOLD,
+    CAPITAL_COST_RATE,
     DEFAULT_LGD,
-    LGBM_MODEL_PATH,
-    TRAIN_MEDIANS_PATH,
+    OPERATING_COST_RATE,
+    PERFORMING_MARGIN_RATE,
+    model_bundle_dir,
 )
+from src.decision_policy import DecisionPolicy
 from src.explain import reason_codes
 
-REQUIRED_ARTIFACTS = [LGBM_MODEL_PATH, TRAIN_MEDIANS_PATH, CAT_DTYPES_PATH]
+
+class InvalidApplicantError(ValueError):
+    """A supplied category is outside the fitted application model's contract."""
+
+    def __init__(self, field: str, detail: str) -> None:
+        super().__init__(detail)
+        self.field = field
+
+
+CATEGORY_FIELD_NAMES = {
+    "NAME_CONTRACT_TYPE": "contract_type",
+    "NAME_EDUCATION_TYPE": "education",
+    "NAME_INCOME_TYPE": "income_type",
+    "NAME_FAMILY_STATUS": "family_status",
+    "OCCUPATION_TYPE": "occupation",
+    "ORGANIZATION_TYPE": "organization_type",
+}
+
+NUMERIC_FEATURES = {
+    "DAYS_BIRTH",
+    "DAYS_EMPLOYED",
+    "AMT_INCOME_TOTAL",
+    "AMT_CREDIT",
+    "AMT_ANNUITY",
+    "AMT_GOODS_PRICE",
+    "CNT_CHILDREN",
+    "CNT_FAM_MEMBERS",
+    "REGION_POPULATION_RELATIVE",
+    "OWN_CAR_AGE",
+}
 
 
 def load_artifacts() -> dict:
-    missing = [p for p in REQUIRED_ARTIFACTS if not p.exists()]
-    if missing:
-        raise FileNotFoundError(
-            f"Missing model artifacts: {[str(p) for p in missing]}. Run `python -m src.train_lgbm` first."
-        )
-    model = joblib.load(LGBM_MODEL_PATH)
+    bundle = load_artifact_bundle(model_bundle_dir("application"))
     return {
-        "model": model,
-        "train_medians": joblib.load(TRAIN_MEDIANS_PATH),
-        "cat_dtypes": joblib.load(CAT_DTYPES_PATH),
-        "feature_names": model.feature_name_,
-        "explainer": shap.TreeExplainer(model),
+        "model": bundle.model,
+        "train_medians": bundle.train_medians,
+        "cat_dtypes": bundle.category_dtypes,
+        "metadata": bundle.metadata,
+        "feature_names": bundle.metadata["feature_names"],
+        "explainer": shap.TreeExplainer(bundle.model),
     }
 
 
 def applicant_to_row(
     req: ApplicantRequest, feature_names: list[str], cat_dtypes: dict
 ) -> pd.DataFrame:
-    """Map the applicant form onto the model's raw Home Credit column names.
-
-    Fields the form doesn't ask for (most notably EXT_SOURCE_1/2/3 — external credit-bureau
-    scores a real system would fetch from a bureau API at application time, not ask the applicant
-    for) are left as NaN. LightGBM was trained on genuinely incomplete data and handles this via
-    its learned default split direction, the same as any other missing value.
-    """
     raw = {
         "NAME_CONTRACT_TYPE": req.contract_type,
         "DAYS_BIRTH": -req.age_years * 365.25,
@@ -57,7 +71,6 @@ def applicant_to_row(
         "AMT_CREDIT": req.credit_amount,
         "AMT_ANNUITY": req.annuity,
         "AMT_GOODS_PRICE": req.goods_price if req.goods_price is not None else req.credit_amount,
-        "CODE_GENDER": req.gender,
         "FLAG_OWN_CAR": "Y" if req.owns_car else "N",
         "FLAG_OWN_REALTY": "Y" if req.owns_realty else "N",
         "CNT_CHILDREN": req.num_children,
@@ -67,14 +80,18 @@ def applicant_to_row(
         "NAME_FAMILY_STATUS": req.family_status,
         "OCCUPATION_TYPE": req.occupation,
         "ORGANIZATION_TYPE": req.organization_type,
-        "REGION_POPULATION_RELATIVE": req.region_population_relative
-        if req.region_population_relative is not None
-        else np.nan,
-        "OWN_CAR_AGE": req.own_car_age if req.own_car_age is not None else np.nan,
+        "REGION_POPULATION_RELATIVE": req.region_population_relative,
+        "OWN_CAR_AGE": req.own_car_age,
     }
     row = pd.DataFrame([raw]).reindex(columns=feature_names)
-    for col, dtype in cat_dtypes.items():
-        row[col] = row[col].astype(dtype)
+    for column in NUMERIC_FEATURES.intersection(row.columns):
+        row[column] = pd.to_numeric(row[column], errors="coerce")
+    for column, dtype in cat_dtypes.items():
+        value = row.at[0, column]
+        if pd.notna(value) and value not in dtype.categories:
+            field = CATEGORY_FIELD_NAMES.get(column, column)
+            raise InvalidApplicantError(field, f"unsupported category {value!r}")
+        row[column] = row[column].astype(dtype)
     return row
 
 
@@ -83,22 +100,29 @@ def score_applicant(
 ) -> PredictResponse:
     row = applicant_to_row(req, artifacts["feature_names"], artifacts["cat_dtypes"])
     pd_estimate = float(artifacts["model"].predict_proba(row)[0, 1])
-    decision = "decline" if pd_estimate >= DECISION_THRESHOLD else "approve"
+    policy = DecisionPolicy(
+        margin_rate=PERFORMING_MARGIN_RATE,
+        operating_cost_rate=OPERATING_COST_RATE,
+        capital_cost_rate=CAPITAL_COST_RATE,
+        lgd=lgd,
+    )
 
     explanation = artifacts["explainer"](row)
     shap_row = pd.Series(explanation.values[0], index=row.columns)
-    feature_row = row.iloc[0]
-    codes = reason_codes(shap_row, feature_row, artifacts["train_medians"], top_n=3)
+    codes = reason_codes(shap_row, row.iloc[0], artifacts["train_medians"], top_n=3)
 
-    # a brand-new application has no origination-time PD to compare against, so it's Stage 1 by
-    # definition (see src/ecl.py for the staged, portfolio-level version used on existing loans)
+    # This is an illustrative 12-month loss estimate, not a portfolio IFRS 9 calculation.
     ecl = pd_estimate * lgd * req.credit_amount
-
+    metadata = artifacts["metadata"]
     return PredictResponse(
         probability_of_default=round(pd_estimate, 4),
-        decision=decision,
-        decision_threshold=DECISION_THRESHOLD,
+        decision=policy.decision(pd_estimate),
+        decision_threshold=policy.threshold,
         reason_codes=codes,
         expected_credit_loss=round(ecl, 2),
         lgd_assumption=lgd,
+        expected_value=round(policy.expected_value(pd_estimate, req.credit_amount), 2),
+        model_name=metadata["model_name"],
+        model_version=metadata["model_version"],
+        model_profile=metadata["profile"],
     )

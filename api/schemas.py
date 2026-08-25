@@ -8,7 +8,7 @@ natively since it was trained on genuinely incomplete data.
 
 from typing import Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class ApplicantRequest(BaseModel):
@@ -23,7 +23,6 @@ class ApplicantRequest(BaseModel):
     goods_price: float | None = Field(
         None, gt=0, description="Price of goods financed, if applicable"
     )
-    gender: Literal["M", "F"] = Field(..., description="As recorded on the application")
     owns_car: bool = False
     owns_realty: bool = False
     num_children: int = Field(0, ge=0, le=20)
@@ -46,8 +45,10 @@ class ApplicantRequest(BaseModel):
     )
     own_car_age: float | None = Field(None, ge=0, le=80)
 
-    model_config = {
-        "json_schema_extra": {
+    model_config = ConfigDict(
+        extra="forbid",
+        str_strip_whitespace=True,
+        json_schema_extra={
             "example": {
                 "contract_type": "Cash loans",
                 "age_years": 35,
@@ -56,7 +57,6 @@ class ApplicantRequest(BaseModel):
                 "credit_amount": 450000,
                 "annuity": 22500,
                 "goods_price": 450000,
-                "gender": "F",
                 "owns_car": True,
                 "owns_realty": True,
                 "num_children": 1,
@@ -67,14 +67,20 @@ class ApplicantRequest(BaseModel):
                 "occupation": "Core staff",
                 "organization_type": "Business Entity Type 3",
             }
-        }
-    }
+        },
+    )
 
 
 class PredictResponse(BaseModel):
+    model_config = ConfigDict(protected_namespaces=())
+
     probability_of_default: float
     decision: Literal["approve", "decline"]
     decision_threshold: float
     reason_codes: list[str]
     expected_credit_loss: float = Field(..., description="12-month ECL in rand: PD x LGD x EAD")
     lgd_assumption: float
+    expected_value: float = Field(..., description="Illustrative expected value in rand")
+    model_name: str
+    model_version: str
+    model_profile: Literal["application"]

@@ -12,7 +12,7 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 
 from api.schemas import ApplicantRequest, PredictResponse
-from api.scoring import load_artifacts, score_applicant
+from api.scoring import InvalidApplicantError, load_artifacts, score_applicant
 
 state: dict = {}
 
@@ -49,4 +49,7 @@ def health() -> dict:
 def predict(req: ApplicantRequest) -> PredictResponse:
     if "model" not in state:
         raise HTTPException(status_code=503, detail="Model not loaded")
-    return score_applicant(req, state)
+    try:
+        return score_applicant(req, state)
+    except InvalidApplicantError as exc:
+        raise HTTPException(status_code=422, detail=[f"{exc.field}: {exc}"]) from exc

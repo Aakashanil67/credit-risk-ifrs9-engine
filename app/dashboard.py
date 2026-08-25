@@ -36,7 +36,7 @@ def call_api(payload: dict) -> dict | None:
         response = httpx.post(f"{API_URL}/predict", json=payload, timeout=API_TIMEOUT_SECONDS)
         response.raise_for_status()
         return response.json()
-    except (httpx.ConnectError, httpx.TimeoutException, httpx.HTTPStatusError):
+    except (httpx.ConnectError, httpx.TimeoutException):
         return None
 
 
@@ -47,9 +47,7 @@ def score_locally(req: ApplicantRequest, lgd: float) -> dict:
 
 
 st.title("Credit Risk & IFRS 9 Engine")
-st.caption(
-    "Score a loan applicant: probability of default, decision, SHAP reason codes, IFRS 9 ECL."
-)
+st.caption("Application-time PD scoring, illustrative decisions, and explanation codes.")
 
 with st.sidebar:
     st.header("Provisioning assumptions")
@@ -73,7 +71,6 @@ with st.form("applicant_form"):
     with col1:
         st.subheader("Applicant")
         age_years = st.number_input("Age (years)", min_value=18, max_value=100, value=35)
-        gender = st.selectbox("Gender", ["F", "M"])
         num_children = st.number_input("Number of children", min_value=0, max_value=20, value=0)
         family_members = st.number_input("Family members", min_value=1, max_value=20, value=1)
         family_status = st.selectbox(
@@ -128,7 +125,6 @@ if submitted:
         income_total=income_total,
         credit_amount=credit_amount,
         annuity=annuity,
-        gender=gender,
         owns_car=owns_car,
         owns_realty=owns_realty,
         num_children=num_children,
@@ -139,7 +135,11 @@ if submitted:
         occupation=occupation or None,
     )
 
-    api_result = call_api(req.model_dump())
+    try:
+        api_result = call_api(req.model_dump())
+    except httpx.HTTPStatusError as exc:
+        st.error(f"The API rejected this request: {exc.response.text}")
+        st.stop()
     if api_result is not None:
         st.success(f"Scored via live API ({API_URL})")
         result = api_result

@@ -11,11 +11,11 @@ import mlflow.statsmodels
 import numpy as np
 import pandas as pd
 import statsmodels.api as sm
-from scipy.stats import ks_2samp
-from sklearn.metrics import roc_auc_score, roc_curve
+from sklearn.metrics import roc_curve
 
 from src.config import FIGURES_DIR, MLFLOW_EXPERIMENT_NAME, RANDOM_SEED, REPORTS_DIR, TARGET_COL
 from src.data_loader import load_application_data
+from src.evaluation import binary_metrics
 from src.preprocessing import split_data
 
 FEATURES = [
@@ -31,7 +31,6 @@ FEATURES = [
     "REGION_POPULATION_RELATIVE",
     "CNT_CHILDREN",
     "CNT_FAM_MEMBERS",
-    "is_male",
     "owns_car",
     "owns_realty",
 ]
@@ -52,7 +51,6 @@ def engineer_features(df: pd.DataFrame) -> pd.DataFrame:
     out["REGION_POPULATION_RELATIVE"] = df["REGION_POPULATION_RELATIVE"]
     out["CNT_CHILDREN"] = df["CNT_CHILDREN"]
     out["CNT_FAM_MEMBERS"] = df["CNT_FAM_MEMBERS"]
-    out["is_male"] = (df["CODE_GENDER"] == "M").astype(int)
     out["owns_car"] = (df["FLAG_OWN_CAR"] == "Y").astype(int)
     out["owns_realty"] = (df["FLAG_OWN_REALTY"] == "Y").astype(int)
     return out
@@ -69,6 +67,16 @@ def fit_logit(train_X: pd.DataFrame, train_y: pd.Series) -> sm.Logit:
     design = sm.add_constant(train_X)
     model = sm.Logit(train_y, design).fit(disp=False)
     return model
+
+
+def score_predictions(y_true: pd.Series | np.ndarray, pd_score: pd.Series | np.ndarray) -> dict[str, float]:
+    metrics = binary_metrics(np.asarray(y_true), np.asarray(pd_score))
+    return {
+        "AUC": metrics.auc,
+        "Gini": metrics.gini,
+        "KS": metrics.ks,
+        "Brier": metrics.brier,
+    }
 
 
 def coefficient_table(model: sm.Logit) -> pd.DataFrame:
@@ -154,9 +162,7 @@ def run_and_log(
 
     model = fit_logit(train_X, train_y)
     val_pred = model.predict(sm.add_constant(val_X, has_constant="add"))
-    auc = roc_auc_score(val_y, val_pred)
-    ks = ks_2samp(val_pred[val_y == 1], val_pred[val_y == 0]).statistic
-    metrics = {"AUC": auc, "Gini": 2 * auc - 1, "KS": ks}
+    metrics = score_predictions(val_y, val_pred)
 
     mlflow.set_experiment(MLFLOW_EXPERIMENT_NAME)
     with mlflow.start_run(run_name="logistic_baseline"):

@@ -51,7 +51,7 @@ NUMERIC_FEATURES = [
     "REGION_POPULATION_RELATIVE",
     "CNT_CHILDREN",
 ]
-CATEGORICAL_FEATURES = ["CODE_GENDER", "NAME_EDUCATION_TYPE", "FLAG_OWN_CAR"]
+CATEGORICAL_FEATURES = ["NAME_EDUCATION_TYPE", "FLAG_OWN_CAR"]
 FEATURES = NUMERIC_FEATURES + CATEGORICAL_FEATURES
 
 PDO = 20
@@ -70,7 +70,6 @@ def engineer_scorecard_features(df: pd.DataFrame) -> pd.DataFrame:
             "AMT_ANNUITY",
             "REGION_POPULATION_RELATIVE",
             "CNT_CHILDREN",
-            "CODE_GENDER",
             "NAME_EDUCATION_TYPE",
             "FLAG_OWN_CAR",
         ]
