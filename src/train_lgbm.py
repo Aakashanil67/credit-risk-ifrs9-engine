@@ -10,13 +10,14 @@ ask for:
   their existing scorecard's KS without knowing what AUC means.
 """
 
+import argparse
+
 import joblib
 import lightgbm as lgb
 import mlflow
 import mlflow.lightgbm
 import numpy as np
 import pandas as pd
-from scipy.stats import ks_2samp
 from sklearn.metrics import roc_auc_score
 from sklearn.model_selection import StratifiedKFold
 
@@ -32,6 +33,7 @@ from src.config import (
     TRAIN_MEDIANS_PATH,
 )
 from src.data_loader import load_application_data
+from src.evaluation import binary_metrics
 from src.features import build_lgbm_features
 from src.model_profiles import ModelProfile
 from src.preprocessing import split_data
@@ -89,17 +91,14 @@ def fit_final_model(
     return model
 
 
-def gini(auc: float) -> float:
-    return 2 * auc - 1
-
-
-def ks_statistic(y_true: pd.Series, y_pred: np.ndarray) -> float:
-    return ks_2samp(y_pred[y_true == 1], y_pred[y_true == 0]).statistic
-
-
 def score_model(y_true: pd.Series, y_pred: np.ndarray) -> dict[str, float]:
-    auc = roc_auc_score(y_true, y_pred)
-    return {"AUC": auc, "Gini": gini(auc), "KS": ks_statistic(y_true, y_pred)}
+    metrics = binary_metrics(y_true.to_numpy(), y_pred)
+    return {
+        "AUC": metrics.auc,
+        "Gini": metrics.gini,
+        "KS": metrics.ks,
+        "Brier": metrics.brier,
+    }
 
 
 def train_and_log_variant(
@@ -134,18 +133,32 @@ def write_comparison(
         "| metric | logistic baseline | LightGBM | delta |",
         "|---|---|---|---|",
     ]
-    for metric in ("AUC", "Gini", "KS"):
+    for metric in ("AUC", "Gini", "KS", "Brier"):
         delta = lgbm[metric] - baseline[metric]
         lines.append(f"| {metric} | {baseline[metric]:.4f} | {lgbm[metric]:.4f} | {delta:+.4f} |")
     out_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 
-def main() -> None:
-    df = load_application_data()
-    train, val, _test = split_data(df, seed=RANDOM_SEED)
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description="Train a LightGBM PD model")
+    parser.add_argument(
+        "--profile",
+        choices=[profile.value for profile in ModelProfile],
+        default=ModelProfile.FULL.value,
+        help="full is the offline benchmark; application is the deployable input contract",
+    )
+    return parser.parse_args()
 
-    train_X = build_lgbm_features(train, profile=ModelProfile.FULL)
-    val_X = build_lgbm_features(val, profile=ModelProfile.FULL)
+
+def main() -> None:
+    args = parse_args()
+    profile = ModelProfile(args.profile)
+    df = load_application_data()
+    train, val, test = split_data(df, seed=RANDOM_SEED)
+
+    train_X = build_lgbm_features(train, profile=profile)
+    val_X = build_lgbm_features(val, profile=profile)
+    test_X = build_lgbm_features(test, profile=profile)
     train_y, val_y = train[TARGET_COL], val[TARGET_COL]
 
     print("5-fold CV over param grid:")
@@ -157,6 +170,11 @@ def main() -> None:
     )
     print(f"LightGBM validation: {lgbm_metrics}")
 
+    # The test fold is deliberately absent from CV and early stopping above. At this point the
+    # parameters and tree count are frozen, so this is the single final performance estimate.
+    test_metrics = score_model(test[TARGET_COL], model.predict_proba(test_X)[:, 1])
+    print(f"LightGBM untouched test: {test_metrics}")
+
     MODELS_DIR.mkdir(parents=True, exist_ok=True)
     joblib.dump(model, LGBM_MODEL_PATH)
     joblib.dump(train_X.select_dtypes("number").median(), TRAIN_MEDIANS_PATH)
@@ -165,7 +183,7 @@ def main() -> None:
     # produces wrong predictions with no error, so inference must reuse these dtypes exactly.
     cat_dtypes = {col: train_X[col].dtype for col in train_X.select_dtypes("category").columns}
     joblib.dump(cat_dtypes, CAT_DTYPES_PATH)
-    print(f"saved tuned model to {LGBM_MODEL_PATH}")
+    print(f"saved tuned {profile.value} model to {LGBM_MODEL_PATH}")
 
     baseline_metrics, _model, _pred = run_baseline(train, val)
     print(f"baseline validation: {baseline_metrics}")
@@ -173,7 +191,7 @@ def main() -> None:
     REPORTS_DIR.mkdir(parents=True, exist_ok=True)
     write_comparison(
         baseline_metrics,
-        lgbm_metrics,
+        test_metrics,
         best_params,
         best_iteration,
         REPORTS_DIR / "model_comparison.md",
