@@ -40,6 +40,7 @@ from src.config import (
 from src.data_loader import load_application_data
 from src.explain import load_or_train_model
 from src.features import build_lgbm_features
+from src.model_profiles import ModelProfile
 from src.preprocessing import split_data
 
 CREDIT_IMPAIRED_PD_THRESHOLD = 0.5  # Stage 3 if the model gives default better than even odds
@@ -173,7 +174,7 @@ def main() -> None:
     train, val, _test = split_data(df, seed=RANDOM_SEED)
 
     lgbm_model = load_or_train_model()
-    val_X_lgbm = build_lgbm_features(val)
+    val_X_lgbm = build_lgbm_features(val, profile=ModelProfile.FULL)
     current_pd = pd.Series(lgbm_model.predict_proba(val_X_lgbm)[:, 1], index=val_X_lgbm.index)
 
     _baseline_metrics, _baseline_model, baseline_val_pred = run_baseline(train, val)

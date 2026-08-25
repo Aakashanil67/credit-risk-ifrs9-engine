@@ -8,6 +8,7 @@ from src.baseline import run_and_log as run_baseline
 from src.config import RANDOM_SEED, TARGET_COL
 from src.data_loader import load_application_data
 from src.features import build_lgbm_features
+from src.model_profiles import ModelProfile
 from src.preprocessing import split_data
 from src.train_lgbm import PARAM_GRID, train_and_log_variant
 
@@ -19,8 +20,8 @@ def main() -> None:
     baseline_metrics, _model, _pred = run_baseline(train, val)
     print(f"logistic_baseline: {baseline_metrics}")
 
-    train_X = build_lgbm_features(train)
-    val_X = build_lgbm_features(val)
+    train_X = build_lgbm_features(train, profile=ModelProfile.FULL)
+    val_X = build_lgbm_features(val, profile=ModelProfile.FULL)
     train_y, val_y = train[TARGET_COL], val[TARGET_COL]
 
     for params in PARAM_GRID:

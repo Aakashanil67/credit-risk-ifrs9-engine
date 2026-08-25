@@ -33,6 +33,7 @@ from src.config import (
 )
 from src.data_loader import load_application_data
 from src.features import build_lgbm_features
+from src.model_profiles import ModelProfile
 from src.preprocessing import split_data
 
 PARAM_GRID = [
@@ -143,8 +144,8 @@ def main() -> None:
     df = load_application_data()
     train, val, _test = split_data(df, seed=RANDOM_SEED)
 
-    train_X = build_lgbm_features(train)
-    val_X = build_lgbm_features(val)
+    train_X = build_lgbm_features(train, profile=ModelProfile.FULL)
+    val_X = build_lgbm_features(val, profile=ModelProfile.FULL)
     train_y, val_y = train[TARGET_COL], val[TARGET_COL]
 
     print("5-fold CV over param grid:")
