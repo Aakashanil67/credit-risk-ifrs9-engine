@@ -14,10 +14,16 @@ LGBM_MODEL_PATH = MODELS_DIR / "lgbm_model.joblib"
 TRAIN_MEDIANS_PATH = MODELS_DIR / "train_medians.joblib"
 CAT_DTYPES_PATH = MODELS_DIR / "category_dtypes.joblib"
 
-# approve/decline cutoff for the API — set to the population base default rate (8.1%, see
-# reports/eda_summary.md); a real deployment would tune this against a target approval rate or
-# expected loss budget, but a round, explainable number beats an unexplained one for a demo.
-DECISION_THRESHOLD = 0.08
+
+def model_bundle_dir(profile: str) -> Path:
+    """Directory for a profile-specific fitted model and its serving contract."""
+    return MODELS_DIR / profile
+
+# Illustrative per-loan economics for the portfolio demonstration. They are not calibrated to a
+# lender's product-pricing data; src.decision_policy derives the approval threshold from them.
+PERFORMING_MARGIN_RATE = 0.12
+OPERATING_COST_RATE = 0.02
+CAPITAL_COST_RATE = 0.02
 
 RANDOM_SEED = 42
 TARGET_COL = "TARGET"
@@ -30,6 +36,9 @@ TEST_FRACTION = 0.2
 
 # IFRS 9 default assumptions — overridable per call, not hardcoded into the ECL math itself
 DEFAULT_LGD = 0.45
+DECISION_THRESHOLD = (PERFORMING_MARGIN_RATE - OPERATING_COST_RATE - CAPITAL_COST_RATE) / (
+    PERFORMING_MARGIN_RATE + DEFAULT_LGD
+)
 DEFAULT_EAD_COL = "AMT_CREDIT"
 
 # a loan is Stage 2 (lifetime ECL) if current PD has at least doubled since origination
