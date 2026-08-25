@@ -18,6 +18,7 @@ from sklearn.metrics import brier_score_loss
 from src.config import FIGURES_DIR, LGBM_MODEL_PATH, RANDOM_SEED, TARGET_COL
 from src.data_loader import load_application_data
 from src.features import build_lgbm_features
+from src.model_profiles import ModelProfile
 from src.preprocessing import split_data
 
 SHAP_SAMPLE_SIZE = (
@@ -152,7 +153,7 @@ def main() -> None:
 
     model = load_or_train_model()
 
-    val_X = build_lgbm_features(val)
+    val_X = build_lgbm_features(val, profile=ModelProfile.FULL)
     sample = val_X.sample(n=SHAP_SAMPLE_SIZE, random_state=RANDOM_SEED)
     explanation = compute_shap_values(model, sample)
 
@@ -169,7 +170,7 @@ def main() -> None:
     print("wrote reports/figures/shap_beeswarm.png and shap_bar.png")
 
     # per-applicant waterfall + reason codes for the two highest-risk applicants in the sample
-    train_X = build_lgbm_features(train)
+    train_X = build_lgbm_features(train, profile=ModelProfile.FULL)
     train_medians = train_X.select_dtypes("number").median()
 
     proba = model.predict_proba(sample)[:, 1]
