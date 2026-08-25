@@ -1,16 +1,19 @@
+import pandas as pd
 import pytest
 from fastapi.testclient import TestClient
 
 from api.main import app
-from src.config import LGBM_MODEL_PATH
+from api.schemas import ApplicantRequest
+from api.scoring import applicant_to_row, load_artifacts
+from src.config import model_bundle_dir
 
 # These are integration tests against the real trained model, not unit tests — they need
 # artifacts produced by `python -m src.train_lgbm`, which needs the Kaggle dataset. Neither is
 # available in a fresh CI checkout (the dataset can't be committed under Kaggle's terms), so skip
 # cleanly there instead of failing on a FileNotFoundError that has nothing to do with the code.
 pytestmark = pytest.mark.skipif(
-    not LGBM_MODEL_PATH.exists(),
-    reason="requires trained model artifacts — run `python -m src.train_lgbm` first",
+    not model_bundle_dir("application").exists(),
+    reason="requires the application model bundle — run `python -m src.train_lgbm --profile application`",
 )
 
 VALID_APPLICANT = {
@@ -19,7 +22,6 @@ VALID_APPLICANT = {
     "income_total": 180_000,
     "credit_amount": 450_000,
     "annuity": 22_500,
-    "gender": "F",
     "owns_car": True,
     "owns_realty": True,
     "num_children": 1,
@@ -47,10 +49,12 @@ def test_predict_returns_all_expected_fields(client: TestClient) -> None:
     body = response.json()
     assert 0.0 <= body["probability_of_default"] <= 1.0
     assert body["decision"] in ("approve", "decline")
-    assert body["decision_threshold"] == pytest.approx(0.08)
+    assert body["decision_threshold"] == pytest.approx(0.08 / 0.57)
     assert len(body["reason_codes"]) == 3
     assert body["expected_credit_loss"] >= 0
     assert body["lgd_assumption"] == pytest.approx(0.45)
+    assert body["model_profile"] == "application"
+    assert body["model_name"] == "LightGBMClassifier"
 
 
 def test_predict_decision_matches_threshold(client: TestClient) -> None:
@@ -110,8 +114,8 @@ def test_predict_rejects_negative_credit_amount(client: TestClient) -> None:
     assert response.status_code == 422
 
 
-def test_predict_rejects_invalid_gender_literal(client: TestClient) -> None:
-    bad_applicant = {**VALID_APPLICANT, "gender": "X"}
+def test_predict_rejects_unknown_education_category(client: TestClient) -> None:
+    bad_applicant = {**VALID_APPLICANT, "education": "Made-up category"}
     response = client.post("/predict", json=bad_applicant)
     assert response.status_code == 422
 
@@ -120,14 +124,13 @@ def test_422_body_is_flat_field_message_list_not_nested_loc_dicts(client: TestCl
     """Regression guard for the custom validation handler: FastAPI's default 422 body nests each
     error under loc/msg/type/ctx/url, which is correct but makes a caller reconstruct the field
     name from a list. Confirms the flattened 'field: message' format actually ships."""
-    bad_applicant = {**VALID_APPLICANT, "gender": "X", "credit_amount": -1000}
+    bad_applicant = {**VALID_APPLICANT, "credit_amount": -1000}
     response = client.post("/predict", json=bad_applicant)
 
     assert response.status_code == 422
     detail = response.json()["detail"]
     assert isinstance(detail, list)
     assert all(isinstance(item, str) for item in detail)  # not the default list-of-dicts
-    assert any(item.startswith("gender:") for item in detail)
     assert any(item.startswith("credit_amount:") for item in detail)
 
 
@@ -159,7 +162,6 @@ def test_predict_accepts_missing_optional_bureau_and_car_fields(client: TestClie
         "income_total": 120_000,
         "credit_amount": 200_000,
         "annuity": 15_000,
-        "gender": "M",
         "num_children": 0,
         "family_members": 1,
         "education": "Secondary / secondary special",
@@ -172,22 +174,13 @@ def test_predict_accepts_missing_optional_bureau_and_car_fields(client: TestClie
     assert body["expected_credit_loss"] >= 0.0
 
 
-def test_reason_codes_say_missing_not_low_for_absent_bureau_score(client: TestClient) -> None:
-    """The EXT_SOURCE_* bureau scores aren't fields on the request schema at all, so every applicant
-    scored through the API has them as NaN. They also dominate SHAP importance, which means they
-    reliably land in the top-3 reason codes. Guards the rule that a NaN feature is reported as
-    "missing" and never as "low": a first-time applicant has no bureau file, and telling them their
-    score is low is a specific false claim about a real person's credit history."""
+def test_reason_codes_do_not_reference_bureau_fields_absent_from_the_application_model(client: TestClient) -> None:
+    """The served model excludes bureau-only fields, so its reasons must not imply a missing score."""
     response = client.post("/predict", json=VALID_APPLICANT)
     assert response.status_code == 200
 
     reasons = response.json()["reason_codes"]
-    bureau_reasons = [r for r in reasons if "credit bureau score" in r]
-    assert bureau_reasons, f"expected a bureau-score reason in the top 3, got {reasons}"
-    for reason in bureau_reasons:
-        assert reason.lower().startswith(
-            "missing"
-        ), f"NaN bureau score described as a measured value: {reason!r}"
+    assert not any("credit bureau score" in reason for reason in reasons)
 
 
 def test_predict_rejects_wrong_type_for_numeric_field(client: TestClient) -> None:
@@ -196,9 +189,24 @@ def test_predict_rejects_wrong_type_for_numeric_field(client: TestClient) -> Non
     assert response.status_code == 422
 
 
-def test_predict_rejects_extra_unknown_field_types_gracefully(client: TestClient) -> None:
-    """Extra fields Pydantic doesn't know about are ignored by default, not a 500 — confirms the
-    schema doesn't accidentally reject well-formed-but-unfamiliar payloads from an older client."""
+def test_predict_rejects_extra_unknown_fields(client: TestClient) -> None:
+    """The request contract must fail closed instead of silently discarding caller data."""
     applicant_with_extra = {**VALID_APPLICANT, "some_future_field": "value"}
     response = client.post("/predict", json=applicant_with_extra)
-    assert response.status_code == 200
+    assert response.status_code == 422
+
+
+def test_absent_optional_numeric_fields_stay_numeric_for_lightgbm():
+    """A one-row DataFrame otherwise infers object dtype when both values are absent."""
+    artifacts = load_artifacts()
+    request = ApplicantRequest(
+        age_years=25,
+        income_total=120_000,
+        credit_amount=200_000,
+        annuity=15_000,
+    )
+
+    row = applicant_to_row(request, artifacts["feature_names"], artifacts["cat_dtypes"])
+
+    assert pd.api.types.is_float_dtype(row["REGION_POPULATION_RELATIVE"])
+    assert pd.api.types.is_float_dtype(row["OWN_CAR_AGE"])
