@@ -11,6 +11,12 @@ DEFAULT_SCENARIOS = (
 )
 
 
+def validate_scenario_weights(scenarios: tuple[ECLScenario, ...]) -> None:
+    total_weight = sum(scenario.weight for scenario in scenarios)
+    if abs(total_weight - 1.0) > 1e-9:
+        raise ValueError(f"scenario weights must sum to one; got {total_weight:.6f}")
+
+
 def scenario_weighted_ecl(
     stage: int,
     pd_annual: float,
@@ -19,6 +25,7 @@ def scenario_weighted_ecl(
     remaining_months: int,
 ) -> float:
     """Return the probability-weighted discounted ECL across the three scenarios."""
+    validate_scenario_weights(DEFAULT_SCENARIOS)
     return sum(
         discounted_scenario_ecl(
             stage=stage,

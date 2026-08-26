@@ -1,73 +1,74 @@
 # Engineering decisions log
 
-This file records decisions that change how the project should be read or extended. It is not a
-release log; Git history covers individual changes.
+This file records choices that change how the project should be interpreted or extended. Git
+history records individual code changes.
 
 ## Current architecture
 
-`src/train_lgbm.py` trains either an offline full profile or the 18-field application profile.
-`models/application/` stores the model, category dtypes, fit-fold medians and metadata together.
-The FastAPI service loads that bundle at startup. The Streamlit dashboard sends the same request
-contract to the service, then uses the same bundle only when the service cannot be reached.
+`src.train_lgbm` trains the 15-field `public_demo` profile. Its LightGBM bundle lives in
+`models/public_demo/` with the fitted category dtypes, metadata, and model. The
+FastAPI service loads that bundle once at startup. The Streamlit dashboard sends the same request
+contract to the API and can score locally from the same bundle if the API cannot be reached.
 
-An unseen category is rejected at the API boundary rather than translated into a new ordinal code.
-It may signal a source-system change or a value that did not exist when the model was fitted, and
-converting it would produce a plausible score from data outside the model's contract, with no error
-visible to the caller or the person reviewing its response.
+The API rejects unknown fields and unseen categorical values. This is intentional: coercing a new
+source-system category into an arbitrary code would return a plausible-looking score from data
+outside the fitted contract. Cross-field checks also reject impossible employment duration,
+annuity greater than requested credit, and household counts inconsistent with children.
 
-`src/ecl_core.py` contains stage assignment and discounted scenario calculations. `src/ecl_demo.py`
-sets the illustrative scenario weights and loss assumptions. The dashboard deliberately shows the
-simpler 12-month calculation instead of presenting the demonstration as a production provision.
+`src.ecl_core` owns stage assignment and discounted scenario calculations. `src.ecl_demo` owns the
+three stated scenarios. `src.ecl` writes fixed mechanics examples instead of presenting a static
+competition dataset as a real loan portfolio.
 
 ## Decisions that affect results
 
-**The test fold stays untouched.** The data split is stratified 60/20/20 with seed 42. Imputation,
-cross-validation and early stopping use only the fit and validation folds. The application
-model's final AUC is 0.678678 and its Brier score is 0.071635 on the 61,503-row test fold. Those
-numbers are less flattering than the older full-information result, but they answer the deployed
-question.
-That distinction matters.
+**The public form defines the deployed model.** Earlier iterations used fields that the dashboard
+did not collect, leaving visitors to score missing data by default. The public profile removes
+organisation type, regional density, and car age. It also adds goods price and fitted categorical
+selectors so the deployed form and saved model agree.
 
-That sequence is intentionally inconvenient: the final fold may contradict a more flattering
-validation result, but preserving the separation is the only way to judge the reported estimate.
+**The test fold remains untouched until final evaluation.** The split is stratified 60/20/20 with
+seed 42. Five-fold CV chooses parameters on the training fold. Validation selects the tree count.
+The selected model is refit on all development data before one final test score. The v1.2 bundle's
+test metrics are stored with the artifact, not copied by hand into the service.
 
-**The served contract excludes gender and bureau variables.** New applicants may not have a bureau
-file, and a public form should not collect a protected attribute merely to score a demonstration.
-`CODE_GENDER` remains in the raw data for offline group diagnostics. The fairness audit found an
-approval-rate difference under the illustrative threshold, so removing the direct feature did not
-end the review.
+**The model comparison is like for like.** The logistic baseline and LightGBM both use the same
+15 inputs, combined development data, and untouched test fold. A bureau-rich baseline may be a
+useful offline challenger, but it is not a fair claim about a public application-time service.
 
-**The decision cutoff is an economics example.** A 12% performing margin, 2% operating cost, 2%
-capital cost and 45% LGD yield a PD threshold of 0.140351. The formula lives in
-`src/decision_policy.py`. It makes the dashboard reproducible, but it has no authority as a credit
-policy.
+**Amounts have no named currency.** Home Credit does not identify the currency of its monetary
+fields. The API, dashboard, reports, and reason codes therefore say "dataset monetary units" and
+do not use a rand symbol.
 
-**The model bundle is committed; the dataset is not.** Hosting providers build a fresh checkout and
-cannot train the model first. The small fitted artefacts are therefore versioned in Git and copied
-into both images. `application_train.csv` stays ignored because it is competition data.
+**The approval label is illustrative.** A 12% performing margin, 2% operating cost, 2% capital
+cost, and 45% LGD imply a PD threshold of 0.140351. The formula is visible in
+`src.decision_policy`; it is not a credit policy.
 
-## Things that failed and what changed
+**Gender is audit-only.** The served model and request schema exclude `CODE_GENDER`. The offline
+fairness report uses it to surface group differences, not to declare the model fair or unfair.
 
-**A Docker mount hid a deployment defect.** Local Compose mounted `models/` over `/app/models`, so
-the first Render build passed locally and failed in the platform with missing artefacts. Both
-Dockerfiles now copy the model bundle into the image. A standalone container test confirms that the
-API loads the bundle without a host mount.
+## Failures that informed the design
 
-**The old serving path reached the model-building stack.** `api.scoring` reached `src.explain`, which once
-loaded MLflow and scorecard dependencies as a side effect. The serving path now has
-its own `src/reason_codes.py`; `requirements/api.txt` installs only the pinned API runtime. The
-full root requirements file remains for development tooling and the scorecard challenger.
+**A Docker mount hid a deployment defect.** Local Compose mounted `models/` over `/app/models`,
+so the first standalone Render image lacked model artifacts. Both Dockerfiles now copy versioned
+bundles into the image; Compose's mount is only a local-development override.
 
-**The scorecard library is platform-sensitive.** On this Windows environment, the `optbinning`
-solver path can terminate the interpreter. The challenger runs successfully inside a
-Linux container with `OptimalBinning(solver="mip")`. It is kept as an offline experiment and is not
-part of the API image.
+**The first Streamlit dependency set was broader than its runtime path.** Training-only packages
+pulled an incompatible solver stack into Streamlit Cloud. The dashboard has a lean
+`app/requirements.txt`, and serving imports no longer transitively load MLflow or scorecard code.
 
-## Remaining gaps
+**LightGBM 4.7.0 was rejected after a Windows reload failure.** A freshly serialised model faulted
+when its feature names were read in a new Python process. The project pins 4.6.0, which addresses
+the earlier advisory and completed the same fresh-process check. This is a compatibility decision,
+not a claim that 4.7.0 is unsafe everywhere.
 
-- Streamlit must receive `API_URL=https://credit-risk-api-92it.onrender.com` in its deployment
-  secrets before the public dashboard calls the hosted API by default.
-- The project has no out-of-time validation, local outcome data, drift monitor or scheduled
-  retraining process.
-- The ECL scenarios demonstrate mechanics only. They lack observed recovery data, contractual cash
-  flows and an account-level PD history.
+**The initial ECL loop repeated default probability without survival.** Over long horizons it could
+exceed EAD before LGD. The current calculation multiplies each monthly hazard by the probability
+of survival to that month. Stage 3 is explicitly a simplified first discounted cash shortfall.
+
+## Remaining limits
+
+- There is no out-of-time validation, local outcome data, drift monitor, or scheduled retraining.
+- The data lacks recoveries, amortisation schedules, and observed risk migration; ECL remains a
+  mechanics demonstration.
+- The illustrative decision economics have no lender pricing or capital calibration.
+- The fairness diagnostic is descriptive and cannot replace legal, policy, or governance review.

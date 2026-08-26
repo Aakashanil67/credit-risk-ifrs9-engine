@@ -1,8 +1,8 @@
-"""Request/response schemas for the 18-field application-profile prediction contract."""
+"""Request/response schemas for the collectable public-demo prediction contract."""
 
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 
 class ApplicantRequest(BaseModel):
@@ -11,9 +11,11 @@ class ApplicantRequest(BaseModel):
     years_employed: float | None = Field(
         None, ge=0, le=60, description="Years in current employment; omit if not currently employed"
     )
-    income_total: float = Field(..., gt=0, description="Annual income, rand")
-    credit_amount: float = Field(..., gt=0, description="Requested loan amount, rand")
-    annuity: float = Field(..., gt=0, description="Monthly repayment (annuity), rand")
+    income_total: float = Field(..., gt=0, description="Annual income in dataset monetary units")
+    credit_amount: float = Field(
+        ..., gt=0, description="Requested loan amount in dataset monetary units"
+    )
+    annuity: float = Field(..., gt=0, description="Monthly repayment in dataset monetary units")
     goods_price: float | None = Field(
         None, gt=0, description="Price of goods financed, if applicable"
     )
@@ -30,18 +32,10 @@ class ApplicantRequest(BaseModel):
     )
     family_status: str = Field("Married", description="e.g. 'Married', 'Single / not married'")
     occupation: str | None = Field(None, description="e.g. 'Laborers', 'Sales staff', 'Managers'")
-    organization_type: str | None = Field(None, description="Employer type, e.g. 'Self-employed'")
-    region_population_relative: float | None = Field(
-        None,
-        ge=0,
-        le=1,
-        description="Normalised population density of home region; omit if unknown",
-    )
-    own_car_age: float | None = Field(None, ge=0, le=80)
-
     model_config = ConfigDict(
         extra="forbid",
         str_strip_whitespace=True,
+        allow_inf_nan=False,
         json_schema_extra={
             "example": {
                 "contract_type": "Cash loans",
@@ -59,10 +53,19 @@ class ApplicantRequest(BaseModel):
                 "income_type": "Working",
                 "family_status": "Married",
                 "occupation": "Core staff",
-                "organization_type": "Business Entity Type 3",
             }
         },
     )
+
+    @model_validator(mode="after")
+    def validate_cross_field_constraints(self) -> "ApplicantRequest":
+        if self.years_employed is not None and self.years_employed > self.age_years - 14:
+            raise ValueError("years_employed cannot exceed years since age 14")
+        if self.annuity > self.credit_amount:
+            raise ValueError("annuity cannot exceed credit_amount")
+        if self.family_members < self.num_children + 1:
+            raise ValueError("family_members must include the applicant and every child")
+        return self
 
 
 class PredictResponse(BaseModel):
@@ -72,9 +75,13 @@ class PredictResponse(BaseModel):
     decision: Literal["approve", "decline"]
     decision_threshold: float
     reason_codes: list[str]
-    expected_credit_loss: float = Field(..., description="12-month ECL in rand: PD x LGD x EAD")
+    expected_credit_loss: float = Field(
+        ..., description="Illustrative 12-month loss in dataset monetary units: PD x LGD x EAD"
+    )
     lgd_assumption: float
-    expected_value: float = Field(..., description="Illustrative expected value in rand")
+    expected_value: float = Field(
+        ..., description="Illustrative expected value in dataset monetary units"
+    )
     model_name: str
     model_version: str
-    model_profile: Literal["application"]
+    model_profile: Literal["public_demo"]

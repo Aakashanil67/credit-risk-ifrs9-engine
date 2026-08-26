@@ -1,18 +1,16 @@
 # Streamlit Community Cloud prefers a requirements.txt in the app's own directory over the repo
-# root, so this is the one it reads. It's a deliberate subset: only what app/dashboard.py's import
-# chain (api.scoring -> src.explain -> src.features/config/data_loader/preprocessing) needs at
-# runtime. Training-only packages are left out on purpose. optbinning drags in ortools, which wants
-# numpy>=2.0.2 and collides with the numpy==1.26.4 pin below; before this file existed that
-# collision made the platform's resolver give up entirely. See DECISIONS.md.
+# root, so this is the one it reads. It's a deliberate subset: only what app/dashboard.py's serving
+# chain (api.scoring, schemas, reason codes and model artifacts) needs at runtime. Training-only
+# packages are left out on purpose, keeping the hosted app small and its dependency graph clear.
 pandas==2.2.3
 numpy==1.26.4
 scipy==1.13.1
 scikit-learn==1.5.2
-lightgbm==4.5.0
+lightgbm==4.6.0
 shap==0.46.0
 matplotlib==3.9.2
-fastapi==0.115.5
-streamlit==1.40.1
-joblib==1.4.2
-httpx==0.27.2
-pydantic==2.9.2
+fastapi==0.141.1
+streamlit==1.62.0
+joblib==1.5.3
+httpx==0.28.1
+pydantic==2.13.4

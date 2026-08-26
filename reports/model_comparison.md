@@ -1,17 +1,12 @@
-# Baseline vs LightGBM
+# Public-demo logistic baseline vs LightGBM
 
-The deployed LightGBM model uses the application profile: 18 fields that can be supplied at
-origination and no gender or bureau variables. Its parameters came from five-fold CV on the
-training fold (`{'learning_rate': 0.05, 'num_leaves': 31}`); early stopping selected 166 trees on
-validation data. The figures below are useful context, not a direct model contest: the logistic
-baseline uses a richer, bureau-based feature set and is measured on validation data, while the
-LightGBM figures are the single final estimate on the untouched test fold.
+Both models use the same 15-field public-demo contract and the same untouched test fold. LightGBM parameters come from 5-fold CV on the training fold; early stopping on the validation fold selected 193 trees for `{'learning_rate': 0.05, 'num_leaves': 31}`. The final LightGBM model and logistic baseline were then each fitted on the combined train and validation folds before this test evaluation.
 
-That distinction matters.
-
-| metric | logistic baseline (validation) | application LightGBM (test) | difference |
+| metric | logistic baseline | LightGBM | delta |
 |---|---|---|---|
-| AUC | 0.7283 | 0.6787 | -0.0497 |
-| Gini | 0.4567 | 0.3574 | -0.0993 |
-| KS | 0.3390 | 0.2597 | -0.0793 |
-| Brier | 0.0695 | 0.0716 | +0.0021 |
+| AUC | 0.6563 | 0.6774 | +0.0210 |
+| Gini | 0.3127 | 0.3547 | +0.0420 |
+| KS | 0.2319 | 0.2611 | +0.0291 |
+| Brier | 0.0723 | 0.0716 | -0.0007 |
+| PR_AUC | 0.1444 | 0.1612 | +0.0168 |
+| LogLoss | 0.2691 | 0.2652 | -0.0039 |

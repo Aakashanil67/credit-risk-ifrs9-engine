@@ -12,6 +12,8 @@ def test_binary_metrics_match_a_perfect_ranking_with_nonzero_probability_error()
     assert metrics.gini == pytest.approx(1.0)
     assert metrics.ks == pytest.approx(1.0)
     assert metrics.brier == pytest.approx(0.025)
+    assert metrics.pr_auc == pytest.approx(1.0)
+    assert metrics.log_loss == pytest.approx(-(np.log(0.9) + np.log(0.8)) / 2)
 
 
 def test_threshold_metrics_count_declines_as_predicted_defaults():

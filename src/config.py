@@ -10,9 +10,6 @@ FIGURES_DIR = REPORTS_DIR / "figures"
 MODELS_DIR = ROOT / "models"
 
 RAW_TRAIN_PATH = DATA_DIR / "application_train.csv"
-LGBM_MODEL_PATH = MODELS_DIR / "lgbm_model.joblib"
-TRAIN_MEDIANS_PATH = MODELS_DIR / "train_medians.joblib"
-CAT_DTYPES_PATH = MODELS_DIR / "category_dtypes.joblib"
 
 
 def model_bundle_dir(profile: str) -> Path:
@@ -20,7 +17,7 @@ def model_bundle_dir(profile: str) -> Path:
     return MODELS_DIR / profile
 
 
-# Illustrative per-loan economics for the portfolio demonstration. They are not calibrated to a
+# Illustrative per-loan economics for the public demonstration. They are not calibrated to a
 # lender's product-pricing data; src.decision_policy derives the approval threshold from them.
 PERFORMING_MARGIN_RATE = 0.12
 OPERATING_COST_RATE = 0.02
@@ -44,5 +41,3 @@ DEFAULT_EAD_COL = "AMT_CREDIT"
 
 # a loan is Stage 2 (lifetime ECL) if current PD has at least doubled since origination
 SICR_PD_RATIO_THRESHOLD = 2.0
-
-MLFLOW_EXPERIMENT_NAME = "credit-risk-ifrs9-engine"
