@@ -1,4 +1,4 @@
-"""LightGBM on the full feature set, tuned against a small grid, compared to the logistic baseline.
+"""Train the public-demo LightGBM PD model and evaluate it against a like-for-like baseline.
 
 Two credit-industry metrics show up alongside AUC because that's what a risk team will actually
 ask for:
@@ -26,7 +26,6 @@ from sklearn.metrics import roc_auc_score
 from sklearn.model_selection import StratifiedKFold
 
 from src.artifacts import ArtifactBundle, save_artifact_bundle
-from src.baseline import run_and_log as run_baseline
 from src.config import (
     MLFLOW_EXPERIMENT_NAME,
     RANDOM_SEED,
@@ -39,6 +38,7 @@ from src.evaluation import binary_metrics
 from src.features import build_lgbm_features
 from src.model_profiles import ModelProfile
 from src.preprocessing import split_data
+from src.public_demo_baseline import fit_and_evaluate_public_demo_baseline
 
 PARAM_GRID = [
     {"learning_rate": 0.05, "num_leaves": 31},
@@ -75,10 +75,12 @@ def training_metadata(
     validation_rows: int,
     test_rows: int,
     data_path: Path,
+    selected_params: dict,
+    best_iteration: int,
 ) -> dict:
     return {
         "model_name": "LightGBMClassifier",
-        "model_version": "1",
+        "model_version": "1.2.0",
         "profile": profile.value,
         "trained_at_utc": datetime.now(UTC).isoformat(),
         "git_revision": current_revision(),
@@ -90,6 +92,11 @@ def training_metadata(
             for column, dtype in category_dtypes.items()
         },
         "split_rows": {"train": train_rows, "validation": validation_rows, "test": test_rows},
+        "selection": {
+            "parameters": selected_params,
+            "early_stopping_iteration": best_iteration,
+            "refit_rows": train_rows + validation_rows,
+        },
         "test_metrics": test_metrics,
         "package_versions": {
             package: version(package) for package in ("lightgbm", "numpy", "pandas", "scikit-learn")
@@ -139,6 +146,34 @@ def fit_final_model(
     return model
 
 
+def refit_selected_model(
+    train: pd.DataFrame, val: pd.DataFrame, params: dict, best_iteration: int, profile: ModelProfile
+) -> tuple[lgb.LGBMClassifier, pd.DataFrame, dict]:
+    """Refit the selected tree count on every development row before the one final test score."""
+    development = pd.concat([train, val], ignore_index=True)
+    development_X = build_lgbm_features(development, profile=profile)
+    category_dtypes = {
+        column: development_X[column].dtype
+        for column in development_X.select_dtypes("category").columns
+    }
+    model = lgb.LGBMClassifier(
+        n_estimators=best_iteration,
+        random_state=RANDOM_SEED,
+        verbose=-1,
+        **params,
+    )
+    model.fit(development_X, development[TARGET_COL])
+    return model, development_X, category_dtypes
+
+
+def align_category_dtypes(X: pd.DataFrame, category_dtypes: dict) -> pd.DataFrame:
+    """Use the fitted category boundaries for validation, test, and serving predictions."""
+    aligned = X.copy()
+    for column, dtype in category_dtypes.items():
+        aligned[column] = aligned[column].astype(dtype)
+    return aligned
+
+
 def score_model(y_true: pd.Series, y_pred: np.ndarray) -> dict[str, float]:
     metrics = binary_metrics(y_true.to_numpy(), y_pred)
     return {
@@ -146,6 +181,8 @@ def score_model(y_true: pd.Series, y_pred: np.ndarray) -> dict[str, float]:
         "Gini": metrics.gini,
         "KS": metrics.ks,
         "Brier": metrics.brier,
+        "PR_AUC": metrics.pr_auc,
+        "LogLoss": metrics.log_loss,
     }
 
 
@@ -173,15 +210,18 @@ def write_comparison(
     baseline: dict, lgbm: dict, best_params: dict, best_iteration: int, out_path
 ) -> None:
     lines = [
-        "# Baseline vs LightGBM",
+        "# Public-demo logistic baseline vs LightGBM",
         "",
-        f"LightGBM best params from 5-fold CV: `{best_params}`, stopped at "
-        f"{best_iteration} trees via early stopping against validation AUC.",
+        "Both models use the same 15-field public-demo contract and the same untouched test "
+        "fold. LightGBM parameters come from 5-fold CV on the training fold; early stopping on "
+        f"the validation fold selected {best_iteration} trees for `{best_params}`. The final "
+        "LightGBM model and logistic baseline were then each fitted on the combined train and "
+        "validation folds before this test evaluation.",
         "",
         "| metric | logistic baseline | LightGBM | delta |",
         "|---|---|---|---|",
     ]
-    for metric in ("AUC", "Gini", "KS", "Brier"):
+    for metric in ("AUC", "Gini", "KS", "Brier", "PR_AUC", "LogLoss"):
         delta = lgbm[metric] - baseline[metric]
         lines.append(f"| {metric} | {baseline[metric]:.4f} | {lgbm[metric]:.4f} | {delta:+.4f} |")
     out_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
@@ -192,8 +232,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--profile",
         choices=[profile.value for profile in ModelProfile],
-        default=ModelProfile.FULL.value,
-        help="full is the offline benchmark; application is the deployable input contract",
+        default=ModelProfile.PUBLIC_DEMO.value,
+        help="public_demo is the deployed contract; full and application are retained for offline analysis",
     )
     return parser.parse_args()
 
@@ -207,31 +247,39 @@ def main() -> None:
     train_X = build_lgbm_features(train, profile=profile)
     val_X = build_lgbm_features(val, profile=profile)
     test_X = build_lgbm_features(test, profile=profile)
+    train_category_dtypes = {
+        column: train_X[column].dtype for column in train_X.select_dtypes("category").columns
+    }
+    val_X = align_category_dtypes(val_X, train_category_dtypes)
     train_y, val_y = train[TARGET_COL], val[TARGET_COL]
 
     print("5-fold CV over param grid:")
     best_params = cv_select_params(train_X, train_y)
     print(f"selected {best_params}")
 
-    lgbm_metrics, best_iteration, model = train_and_log_variant(
+    validation_metrics, best_iteration, _selection_model = train_and_log_variant(
         train_X, train_y, val_X, val_y, best_params, run_name="lgbm_tuned"
     )
-    print(f"LightGBM validation: {lgbm_metrics}")
+    print(f"LightGBM validation: {validation_metrics}")
+
+    model, development_X, cat_dtypes = refit_selected_model(
+        train, val, best_params, best_iteration, profile
+    )
+    test_X = align_category_dtypes(test_X, cat_dtypes)
 
     # The test fold is deliberately absent from CV and early stopping above. At this point the
     # parameters and tree count are frozen, so this is the single final performance estimate.
     test_metrics = score_model(test[TARGET_COL], model.predict_proba(test_X)[:, 1])
     print(f"LightGBM untouched test: {test_metrics}")
 
-    # persist the exact category boundaries LightGBM was trained on — encoding a category column
+    # Persist the exact category boundaries LightGBM was trained on — encoding a category column
     # against a *different* set of categories at inference time silently shifts every code and
     # produces wrong predictions with no error, so inference must reuse these dtypes exactly.
-    cat_dtypes = {col: train_X[col].dtype for col in train_X.select_dtypes("category").columns}
     bundle_dir = model_bundle_dir(profile.value)
     save_artifact_bundle(
         ArtifactBundle(
             model=model,
-            train_medians=train_X.select_dtypes("number").median(),
+            train_medians=development_X.select_dtypes("number").median(),
             category_dtypes=cat_dtypes,
             metadata=training_metadata(
                 profile,
@@ -242,14 +290,18 @@ def main() -> None:
                 len(val),
                 len(test),
                 Path("data/application_train.csv"),
+                best_params,
+                best_iteration,
             ),
         ),
         bundle_dir,
     )
     print(f"saved tuned {profile.value} bundle to {bundle_dir}")
 
-    baseline_metrics, _model, _pred = run_baseline(train, val)
-    print(f"baseline validation: {baseline_metrics}")
+    baseline_metrics, _baseline_model, _baseline_pred = fit_and_evaluate_public_demo_baseline(
+        pd.concat([train, val], ignore_index=True), test
+    )
+    print(f"public-demo logistic baseline test: {baseline_metrics}")
 
     REPORTS_DIR.mkdir(parents=True, exist_ok=True)
     write_comparison(
