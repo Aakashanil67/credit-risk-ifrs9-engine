@@ -10,8 +10,10 @@ release log; Git history covers individual changes.
 The FastAPI service loads that bundle at startup. The Streamlit dashboard sends the same request
 contract to the service, then uses the same bundle only when the service cannot be reached.
 
-An unseen category is rejected at the API boundary rather than translated into a new ordinal code;
-silently changing that code would change the model input while leaving the request syntactically valid.
+An unseen category is rejected at the API boundary rather than translated into a new ordinal code.
+It may signal a source-system change or a value that did not exist when the model was fitted, and
+converting it would produce a plausible score from data outside the model's contract, with no error
+visible to the caller or the person reviewing its response.
 
 `src/ecl_core.py` contains stage assignment and discounted scenario calculations. `src/ecl_demo.py`
 sets the illustrative scenario weights and loss assumptions. The dashboard deliberately shows the
@@ -56,8 +58,8 @@ loaded MLflow and scorecard dependencies as a side effect. The serving path now 
 its own `src/reason_codes.py`; `requirements/api.txt` installs only the pinned API runtime. The
 full root requirements file remains for development tooling and the scorecard challenger.
 
-**The scorecard library is platform-sensitive.** On this Windows environment, loading the
-`optbinning` solver path can terminate the interpreter. The challenger runs successfully inside a
+**The scorecard library is platform-sensitive.** On this Windows environment, the `optbinning`
+solver path can terminate the interpreter. The challenger runs successfully inside a
 Linux container with `OptimalBinning(solver="mip")`. It is kept as an offline experiment and is not
 part of the API image.
 
