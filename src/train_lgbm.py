@@ -10,29 +10,34 @@ ask for:
   their existing scorecard's KS without knowing what AUC means.
 """
 
-import joblib
+import argparse
+import hashlib
+import subprocess
+from datetime import UTC, datetime
+from importlib.metadata import version
+from pathlib import Path
+
 import lightgbm as lgb
 import mlflow
 import mlflow.lightgbm
 import numpy as np
 import pandas as pd
-from scipy.stats import ks_2samp
 from sklearn.metrics import roc_auc_score
 from sklearn.model_selection import StratifiedKFold
 
+from src.artifacts import ArtifactBundle, save_artifact_bundle
 from src.baseline import run_and_log as run_baseline
 from src.config import (
-    CAT_DTYPES_PATH,
-    LGBM_MODEL_PATH,
     MLFLOW_EXPERIMENT_NAME,
-    MODELS_DIR,
     RANDOM_SEED,
     REPORTS_DIR,
     TARGET_COL,
-    TRAIN_MEDIANS_PATH,
+    model_bundle_dir,
 )
 from src.data_loader import load_application_data
+from src.evaluation import binary_metrics
 from src.features import build_lgbm_features
+from src.model_profiles import ModelProfile
 from src.preprocessing import split_data
 
 PARAM_GRID = [
@@ -44,6 +49,52 @@ CV_N_ESTIMATORS = (
     300  # fixed and modest during the CV sweep — early stopping picks the real count later
 )
 CV_FOLDS = 5
+
+
+def file_sha256(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as source:
+        for chunk in iter(lambda: source.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def current_revision() -> str | None:
+    result = subprocess.run(
+        ["git", "rev-parse", "HEAD"], capture_output=True, check=False, text=True
+    )
+    return result.stdout.strip() if result.returncode == 0 else None
+
+
+def training_metadata(
+    profile: ModelProfile,
+    model: lgb.LGBMClassifier,
+    category_dtypes: dict,
+    test_metrics: dict[str, float],
+    train_rows: int,
+    validation_rows: int,
+    test_rows: int,
+    data_path: Path,
+) -> dict:
+    return {
+        "model_name": "LightGBMClassifier",
+        "model_version": "1",
+        "profile": profile.value,
+        "trained_at_utc": datetime.now(UTC).isoformat(),
+        "git_revision": current_revision(),
+        "dataset_sha256": file_sha256(data_path),
+        "random_seed": RANDOM_SEED,
+        "feature_names": list(model.feature_name_),
+        "category_levels": {
+            column: [str(value) for value in dtype.categories]
+            for column, dtype in category_dtypes.items()
+        },
+        "split_rows": {"train": train_rows, "validation": validation_rows, "test": test_rows},
+        "test_metrics": test_metrics,
+        "package_versions": {
+            package: version(package) for package in ("lightgbm", "numpy", "pandas", "scikit-learn")
+        },
+    }
 
 
 def cv_select_params(X: pd.DataFrame, y: pd.Series) -> dict:
@@ -88,17 +139,14 @@ def fit_final_model(
     return model
 
 
-def gini(auc: float) -> float:
-    return 2 * auc - 1
-
-
-def ks_statistic(y_true: pd.Series, y_pred: np.ndarray) -> float:
-    return ks_2samp(y_pred[y_true == 1], y_pred[y_true == 0]).statistic
-
-
 def score_model(y_true: pd.Series, y_pred: np.ndarray) -> dict[str, float]:
-    auc = roc_auc_score(y_true, y_pred)
-    return {"AUC": auc, "Gini": gini(auc), "KS": ks_statistic(y_true, y_pred)}
+    metrics = binary_metrics(y_true.to_numpy(), y_pred)
+    return {
+        "AUC": metrics.auc,
+        "Gini": metrics.gini,
+        "KS": metrics.ks,
+        "Brier": metrics.brier,
+    }
 
 
 def train_and_log_variant(
@@ -133,18 +181,32 @@ def write_comparison(
         "| metric | logistic baseline | LightGBM | delta |",
         "|---|---|---|---|",
     ]
-    for metric in ("AUC", "Gini", "KS"):
+    for metric in ("AUC", "Gini", "KS", "Brier"):
         delta = lgbm[metric] - baseline[metric]
         lines.append(f"| {metric} | {baseline[metric]:.4f} | {lgbm[metric]:.4f} | {delta:+.4f} |")
     out_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 
-def main() -> None:
-    df = load_application_data()
-    train, val, _test = split_data(df, seed=RANDOM_SEED)
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description="Train a LightGBM PD model")
+    parser.add_argument(
+        "--profile",
+        choices=[profile.value for profile in ModelProfile],
+        default=ModelProfile.FULL.value,
+        help="full is the offline benchmark; application is the deployable input contract",
+    )
+    return parser.parse_args()
 
-    train_X = build_lgbm_features(train)
-    val_X = build_lgbm_features(val)
+
+def main() -> None:
+    args = parse_args()
+    profile = ModelProfile(args.profile)
+    df = load_application_data()
+    train, val, test = split_data(df, seed=RANDOM_SEED)
+
+    train_X = build_lgbm_features(train, profile=profile)
+    val_X = build_lgbm_features(val, profile=profile)
+    test_X = build_lgbm_features(test, profile=profile)
     train_y, val_y = train[TARGET_COL], val[TARGET_COL]
 
     print("5-fold CV over param grid:")
@@ -156,15 +218,35 @@ def main() -> None:
     )
     print(f"LightGBM validation: {lgbm_metrics}")
 
-    MODELS_DIR.mkdir(parents=True, exist_ok=True)
-    joblib.dump(model, LGBM_MODEL_PATH)
-    joblib.dump(train_X.select_dtypes("number").median(), TRAIN_MEDIANS_PATH)
+    # The test fold is deliberately absent from CV and early stopping above. At this point the
+    # parameters and tree count are frozen, so this is the single final performance estimate.
+    test_metrics = score_model(test[TARGET_COL], model.predict_proba(test_X)[:, 1])
+    print(f"LightGBM untouched test: {test_metrics}")
+
     # persist the exact category boundaries LightGBM was trained on — encoding a category column
     # against a *different* set of categories at inference time silently shifts every code and
     # produces wrong predictions with no error, so inference must reuse these dtypes exactly.
     cat_dtypes = {col: train_X[col].dtype for col in train_X.select_dtypes("category").columns}
-    joblib.dump(cat_dtypes, CAT_DTYPES_PATH)
-    print(f"saved tuned model to {LGBM_MODEL_PATH}")
+    bundle_dir = model_bundle_dir(profile.value)
+    save_artifact_bundle(
+        ArtifactBundle(
+            model=model,
+            train_medians=train_X.select_dtypes("number").median(),
+            category_dtypes=cat_dtypes,
+            metadata=training_metadata(
+                profile,
+                model,
+                cat_dtypes,
+                test_metrics,
+                len(train),
+                len(val),
+                len(test),
+                Path("data/application_train.csv"),
+            ),
+        ),
+        bundle_dir,
+    )
+    print(f"saved tuned {profile.value} bundle to {bundle_dir}")
 
     baseline_metrics, _model, _pred = run_baseline(train, val)
     print(f"baseline validation: {baseline_metrics}")
@@ -172,7 +254,7 @@ def main() -> None:
     REPORTS_DIR.mkdir(parents=True, exist_ok=True)
     write_comparison(
         baseline_metrics,
-        lgbm_metrics,
+        test_metrics,
         best_params,
         best_iteration,
         REPORTS_DIR / "model_comparison.md",

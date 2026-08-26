@@ -7,6 +7,8 @@ what makes "top 3 SHAP drivers" a defensible sentence rather than a hand-wave: t
 features really did account for most of the gap between this applicant's score and the average.
 """
 
+import argparse
+
 import joblib
 import numpy as np
 import pandas as pd
@@ -15,53 +17,21 @@ from matplotlib import pyplot as plt
 from sklearn.calibration import calibration_curve
 from sklearn.metrics import brier_score_loss
 
-from src.config import FIGURES_DIR, LGBM_MODEL_PATH, RANDOM_SEED, TARGET_COL
+from src.artifacts import load_artifact_bundle
+from src.config import FIGURES_DIR, LGBM_MODEL_PATH, RANDOM_SEED, TARGET_COL, model_bundle_dir
 from src.data_loader import load_application_data
 from src.features import build_lgbm_features
+from src.model_profiles import ModelProfile
 from src.preprocessing import split_data
+from src.reason_codes import reason_codes
 
 SHAP_SAMPLE_SIZE = (
     3000  # full validation set (61k rows) isn't needed for a stable importance ranking
 )
 
-# Human-readable descriptions for the features that show up most often in the global ranking.
-# Anything not listed here falls back to the raw column name — this covers what actually mattered,
-# not a hand-authored translation of all 122 raw columns.
-FEATURE_DESCRIPTIONS = {
-    "NAME_CONTRACT_TYPE": "loan type (cash vs revolving)",
-    "EXT_SOURCE_1": "external credit bureau score (source 1)",
-    "EXT_SOURCE_2": "external credit bureau score (source 2)",
-    "EXT_SOURCE_3": "external credit bureau score (source 3)",
-    "AMT_CREDIT": "loan amount",
-    "AMT_INCOME_TOTAL": "reported income",
-    "AMT_ANNUITY": "monthly loan repayment (annuity)",
-    "AMT_GOODS_PRICE": "price of the goods being financed",
-    "DAYS_BIRTH": "applicant age",
-    "DAYS_EMPLOYED": "length of current employment",
-    "DAYS_REGISTRATION": "time since last registration change",
-    "DAYS_ID_PUBLISH": "time since ID document was issued",
-    "REGION_POPULATION_RELATIVE": "population density of home region",
-    "REGION_RATING_CLIENT": "region risk rating",
-    "REGION_RATING_CLIENT_W_CITY": "region risk rating (city-adjusted)",
-    "CODE_GENDER": "gender",
-    "NAME_EDUCATION_TYPE": "education level",
-    "NAME_INCOME_TYPE": "income type",
-    "NAME_FAMILY_STATUS": "family status",
-    "OCCUPATION_TYPE": "occupation",
-    "ORGANIZATION_TYPE": "employer type",
-    "CNT_CHILDREN": "number of children",
-    "CNT_FAM_MEMBERS": "family size",
-    "OWN_CAR_AGE": "age of owned car",
-    "FLAG_OWN_CAR": "car ownership",
-    "FLAG_OWN_REALTY": "property ownership",
-}
-
-
-def humanize_feature(name: str) -> str:
-    return FEATURE_DESCRIPTIONS.get(name, name.replace("_", " ").lower())
-
 
 def load_or_train_model():
+    """Load the legacy full-information model used by the historical portfolio ECL script."""
     if not LGBM_MODEL_PATH.exists():
         raise FileNotFoundError(
             f"{LGBM_MODEL_PATH} not found — run `python -m src.train_lgbm` first to train and save it."
@@ -69,9 +39,26 @@ def load_or_train_model():
     return joblib.load(LGBM_MODEL_PATH)
 
 
+def load_model_bundle(profile: ModelProfile):
+    """Load the versioned model bundle selected for an explainability run."""
+    return load_artifact_bundle(model_bundle_dir(profile.value))
+
+
 def compute_shap_values(model, X: pd.DataFrame) -> shap.Explanation:
     explainer = shap.TreeExplainer(model)
     return explainer(X)
+
+
+def shap_raw_scores(base_values: np.ndarray, shap_values: np.ndarray) -> np.ndarray:
+    """Reconstruct LightGBM's raw margin from Tree SHAP's additive components."""
+    return np.asarray(base_values) + np.asarray(shap_values).sum(axis=1)
+
+
+def validate_shap_additivity(model, X: pd.DataFrame, explanation: shap.Explanation) -> None:
+    """Fail if the explanation stops reconstructing the model's raw output."""
+    expected = model.predict(X, raw_score=True)
+    actual = shap_raw_scores(explanation.base_values, explanation.values)
+    np.testing.assert_allclose(actual, expected, rtol=1e-6, atol=1e-6)
 
 
 def save_current_shap_plot(out_path) -> None:
@@ -81,36 +68,6 @@ def save_current_shap_plot(out_path) -> None:
     fig.tight_layout()
     fig.savefig(out_path, dpi=120, bbox_inches="tight")
     plt.close(fig)
-
-
-def reason_codes(
-    shap_row: pd.Series, feature_row: pd.Series, train_medians: pd.Series, top_n: int = 3
-) -> list[str]:
-    """Turn the top-`top_n` SHAP drivers for one applicant into plain-English sentences."""
-    top_features = shap_row.abs().sort_values(ascending=False).head(top_n).index
-
-    sentences = []
-    for feat in top_features:
-        shap_val = shap_row[feat]
-        value = feature_row[feat]
-        desc = humanize_feature(feat)
-
-        if pd.isna(value):
-            # e.g. a bureau score the applicant's file doesn't have yet — "low" would be a lie
-            clause = f"missing {desc}"
-        elif (
-            isinstance(value, int | float | np.integer | np.floating)
-            and feat in train_medians.index
-        ):
-            qualifier = "high" if value > train_medians[feat] else "low"
-            clause = f"{qualifier} {desc}"
-        else:
-            clause = f"{desc} of {value}"
-
-        verb = "raises" if shap_val > 0 else "lowers"
-        sentences.append(f"{clause[0].upper()}{clause[1:]} {verb} the estimated default risk.")
-
-    return sentences
 
 
 def calibration_summary(y_true: pd.Series, y_pred: np.ndarray, n_bins: int = 10) -> dict:
@@ -146,31 +103,44 @@ def plot_calibration_curve(calibration: dict, out_path) -> None:
     plt.close(fig)
 
 
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description="Create SHAP plots for a versioned model bundle")
+    parser.add_argument(
+        "--profile",
+        choices=[profile.value for profile in ModelProfile],
+        default=ModelProfile.APPLICATION.value,
+    )
+    return parser.parse_args()
+
+
 def main() -> None:
+    args = parse_args()
+    profile = ModelProfile(args.profile)
     df = load_application_data()
-    train, val, _test = split_data(df, seed=RANDOM_SEED)
+    _train, val, _test = split_data(df, seed=RANDOM_SEED)
 
-    model = load_or_train_model()
+    bundle = load_model_bundle(profile)
+    model = bundle.model
 
-    val_X = build_lgbm_features(val)
+    val_X = build_lgbm_features(val, profile=profile)
     sample = val_X.sample(n=SHAP_SAMPLE_SIZE, random_state=RANDOM_SEED)
     explanation = compute_shap_values(model, sample)
+    validate_shap_additivity(model, sample, explanation)
 
     FIGURES_DIR.mkdir(parents=True, exist_ok=True)
 
     plt.figure()
     shap.plots.beeswarm(explanation, show=False, max_display=15)
-    save_current_shap_plot(FIGURES_DIR / "shap_beeswarm.png")
+    save_current_shap_plot(FIGURES_DIR / f"{profile.value}_shap_beeswarm.png")
 
     plt.figure()
     shap.plots.bar(explanation, show=False, max_display=15)
-    save_current_shap_plot(FIGURES_DIR / "shap_bar.png")
+    save_current_shap_plot(FIGURES_DIR / f"{profile.value}_shap_bar.png")
 
-    print("wrote reports/figures/shap_beeswarm.png and shap_bar.png")
+    print(f"wrote {profile.value}_shap_beeswarm.png and {profile.value}_shap_bar.png")
 
     # per-applicant waterfall + reason codes for the two highest-risk applicants in the sample
-    train_X = build_lgbm_features(train)
-    train_medians = train_X.select_dtypes("number").median()
+    train_medians = bundle.train_medians
 
     proba = model.predict_proba(sample)[:, 1]
     riskiest = np.argsort(proba)[-2:][::-1]
@@ -181,7 +151,7 @@ def main() -> None:
 
         plt.figure()
         shap.plots.waterfall(explanation[row_idx], show=False, max_display=10)
-        save_current_shap_plot(FIGURES_DIR / f"shap_waterfall_applicant_{rank}.png")
+        save_current_shap_plot(FIGURES_DIR / f"{profile.value}_shap_waterfall_applicant_{rank}.png")
 
         codes = reason_codes(shap_row, feature_row, train_medians)
         print(f"applicant SK_ID_CURR={applicant_id} (PD={proba[row_idx]:.3f}):")
@@ -191,7 +161,7 @@ def main() -> None:
     # calibration on the full validation set, not just the SHAP sample — more stable bin estimates
     full_val_pred = model.predict_proba(val_X)[:, 1]
     calibration = calibration_summary(val[TARGET_COL], full_val_pred)
-    plot_calibration_curve(calibration, FIGURES_DIR / "calibration_curve.png")
+    plot_calibration_curve(calibration, FIGURES_DIR / f"{profile.value}_calibration_curve.png")
     print(f"Brier score: {calibration['brier_score']:.4f}")
 
 

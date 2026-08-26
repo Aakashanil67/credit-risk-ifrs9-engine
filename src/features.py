@@ -11,12 +11,22 @@ all: with the untrimmed import chain, `pip`/`uv` had to resolve optbinning's ort
 import numpy as np
 import pandas as pd
 
-from src.config import TARGET_COL
+from src.config import ID_COL, TARGET_COL
+from src.model_profiles import APPLICATION_FEATURES, PROTECTED_AUDIT_COLUMNS, ModelProfile
 
 
-def build_lgbm_features(df: pd.DataFrame) -> pd.DataFrame:
-    feature_cols = [c for c in df.columns if c not in ("SK_ID_CURR", TARGET_COL)]
-    X = df[feature_cols].copy()
+def build_lgbm_features(df: pd.DataFrame, profile: ModelProfile) -> pd.DataFrame:
+    """Build the exact feature matrix declared by a model profile."""
+    if profile is ModelProfile.APPLICATION:
+        missing = [feature for feature in APPLICATION_FEATURES if feature not in df]
+        if missing:
+            raise ValueError(f"Application profile is missing required features: {missing}")
+        X = df[APPLICATION_FEATURES].copy()
+    elif profile is ModelProfile.FULL:
+        excluded = {ID_COL, TARGET_COL, *PROTECTED_AUDIT_COLUMNS}
+        X = df[[column for column in df.columns if column not in excluded]].copy()
+    else:
+        raise ValueError(f"Unsupported feature profile: {profile}")
     X["DAYS_EMPLOYED"] = X["DAYS_EMPLOYED"].replace(365243, np.nan)  # same sentinel bug as baseline
     for col in X.select_dtypes("object").columns:
         X[col] = X[col].astype("category")

@@ -17,14 +17,9 @@ RUN apt-get update \
     && apt-get install -y --no-install-recommends libgomp1 \
     && rm -rf /var/lib/apt/lists/*
 
-# requirements.txt pulls in some training-only packages (statsmodels, mlflow, scipy, optbinning)
-# this service never calls directly — api/scoring.py imports src.explain, which imports
-# src.train_lgbm for build_lgbm_features(), which imports src.baseline for the module-level
-# comparison logic, dragging the whole training import graph in at module load time even though
-# none of it runs on the request path. Splitting a serving-only import path out of src/ would
-# trim the image; not done here since it touches several modules for a size optimisation, not a
-# correctness one.
-COPY requirements.txt .
+# The API has its own pinned runtime set. Installing the scorecard, MLflow and notebook tooling
+# here added several minutes to builds without contributing to a prediction request.
+COPY requirements/api.txt requirements.txt
 RUN pip install --no-cache-dir -r requirements.txt
 
 COPY src/ src/
