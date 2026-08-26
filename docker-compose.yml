@@ -1,6 +1,5 @@
-# Run `python -m src.train_lgbm` on the host first (needs data/application_train.csv, which
-# isn't in this repo — see README for where to get it) so ./models has real artifacts before
-# `docker compose up`. Without that, both containers start but /predict 503s.
+# Each image includes the versioned public-demo bundle. The read-only models/ mounts below are a
+# local-development override: retrain on the host, then restart Compose without rebuilding.
 
 services:
   api:

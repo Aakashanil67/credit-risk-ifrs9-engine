@@ -17,8 +17,8 @@ RUN apt-get update \
     && apt-get install -y --no-install-recommends libgomp1 \
     && rm -rf /var/lib/apt/lists/*
 
-# The API has its own pinned runtime set. Installing the scorecard, MLflow and notebook tooling
-# here added several minutes to builds without contributing to a prediction request.
+# The API has its own pinned runtime set. Training and notebook tooling do not belong in a
+# prediction image, so this keeps builds smaller and the deployed dependency graph narrower.
 COPY requirements/api.txt requirements.txt
 RUN pip install --no-cache-dir -r requirements.txt
 

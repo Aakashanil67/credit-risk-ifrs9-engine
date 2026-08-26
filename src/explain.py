@@ -9,7 +9,6 @@ features really did account for most of the gap between this applicant's score a
 
 import argparse
 
-import joblib
 import numpy as np
 import pandas as pd
 import shap
@@ -18,7 +17,7 @@ from sklearn.calibration import calibration_curve
 from sklearn.metrics import brier_score_loss
 
 from src.artifacts import load_artifact_bundle
-from src.config import FIGURES_DIR, LGBM_MODEL_PATH, RANDOM_SEED, TARGET_COL, model_bundle_dir
+from src.config import FIGURES_DIR, RANDOM_SEED, TARGET_COL, model_bundle_dir
 from src.data_loader import load_application_data
 from src.features import build_lgbm_features
 from src.model_profiles import ModelProfile
@@ -28,15 +27,6 @@ from src.reason_codes import reason_codes
 SHAP_SAMPLE_SIZE = (
     3000  # full validation set (61k rows) isn't needed for a stable importance ranking
 )
-
-
-def load_or_train_model():
-    """Load the legacy full-information model used by the historical portfolio ECL script."""
-    if not LGBM_MODEL_PATH.exists():
-        raise FileNotFoundError(
-            f"{LGBM_MODEL_PATH} not found — run `python -m src.train_lgbm` first to train and save it."
-        )
-    return joblib.load(LGBM_MODEL_PATH)
 
 
 def load_model_bundle(profile: ModelProfile):
@@ -107,8 +97,8 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Create SHAP plots for a versioned model bundle")
     parser.add_argument(
         "--profile",
-        choices=[profile.value for profile in ModelProfile],
-        default=ModelProfile.APPLICATION.value,
+        choices=[ModelProfile.PUBLIC_DEMO.value],
+        default=ModelProfile.PUBLIC_DEMO.value,
     )
     return parser.parse_args()
 
@@ -140,8 +130,6 @@ def main() -> None:
     print(f"wrote {profile.value}_shap_beeswarm.png and {profile.value}_shap_bar.png")
 
     # per-applicant waterfall + reason codes for the two highest-risk applicants in the sample
-    train_medians = bundle.train_medians
-
     proba = model.predict_proba(sample)[:, 1]
     riskiest = np.argsort(proba)[-2:][::-1]
     for rank, row_idx in enumerate(riskiest, start=1):
@@ -153,7 +141,7 @@ def main() -> None:
         shap.plots.waterfall(explanation[row_idx], show=False, max_display=10)
         save_current_shap_plot(FIGURES_DIR / f"{profile.value}_shap_waterfall_applicant_{rank}.png")
 
-        codes = reason_codes(shap_row, feature_row, train_medians)
+        codes = reason_codes(shap_row, feature_row)
         print(f"applicant SK_ID_CURR={applicant_id} (PD={proba[row_idx]:.3f}):")
         for code in codes:
             print(f"  - {code}")

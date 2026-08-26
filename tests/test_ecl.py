@@ -6,9 +6,10 @@ def test_mechanics_examples_cover_each_ifrs9_stage() -> None:
 
     assert examples["stage"].tolist() == [1, 2, 3]
     assert examples["ecl"].between(0, examples["ead"]).all()
-    assert examples.loc[examples["stage"] == 2, "ecl"].iloc[0] > examples.loc[
-        examples["stage"] == 1, "ecl"
-    ].iloc[0]
+    assert (
+        examples.loc[examples["stage"] == 2, "ecl"].iloc[0]
+        > examples.loc[examples["stage"] == 1, "ecl"].iloc[0]
+    )
 
 
 def test_mechanics_examples_use_explicit_stage_rules() -> None:

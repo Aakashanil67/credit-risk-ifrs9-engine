@@ -1,79 +1,70 @@
-# Model card: application-profile PD model
+# Model card: public-demo PD model
 
 ## Intended use
 
-This is an educational probability-of-default model for an unsecured consumer-loan application.
-It is exposed through a FastAPI endpoint and a Streamlit demonstration so that the model contract,
-decision rule and explanation path can be inspected together. It is not approved for credit
-decisions, product prices, collections, accounting provisions or automated adverse action.
+This is an educational probability-of-default model for a consumer-loan application. The FastAPI
+service and Streamlit dashboard make its input contract, explanation path, and illustrative
+decision rule inspectable. It is not approved for lending, product pricing, collections,
+accounting, or automated adverse action.
 
-## Data and split
+## Data and model contract
 
-The model uses Kaggle's Home Credit Default Risk `application_train.csv`: 307,511 historical loan
-applications, 122 raw columns and an 8.1% default rate. `TARGET=1` records a late-payment outcome
-defined by the competition data. The dataset is not South African.
-That matters.
+The model uses Kaggle's Home Credit Default Risk `application_train.csv`: 307,511 historical
+applications with 122 raw columns and an 8.1% event rate. `TARGET=1` denotes payment difficulty
+under the competition's definition; the public dataset does not disclose the exact delinquency-day
+threshold. The data is not South African and should not be treated as a local portfolio.
 
-The data was split 60/20/20 with stratification and seed 42. All model selection happens on the
-184,506-row training fold and the 61,502-row validation fold. The 61,503-row test fold is reserved
-for the final estimate. The application bundle records its dataset hash, package versions, category
-levels, feature names and test metrics in `models/application/metadata.json`.
+The served contract has 15 application-time fields: contract type, age, employment tenure, income,
+credit amount, annuity, goods price, car and property ownership, household counts, education,
+income type, family status, and occupation. It excludes gender, external credit-bureau variables,
+organisation type, regional density, and car age. The dashboard exposes every required field and
+its categorical choices are constrained to the fitted category levels.
 
-## Inputs and output
-
-The model receives 18 application-time fields. They include requested credit, annuity, declared
-income, employment tenure, selected household fields, education, income type, family status,
-occupation, employer type, regional population density and car age. Gender and external
-credit-bureau fields are deliberately absent from the served contract.
-
-The output is a PD estimate, three SHAP-based reason codes, an illustrative expected-value decision
-and a simple 12-month loss estimate. A response is not a credit decision about a real person. The
-reason codes explain model contributions; they do not establish causation.
+Data is split 60/20/20 with stratification and seed 42. Five-fold cross-validation on the training
+fold selects hyperparameters. Early stopping on validation chooses the tree count. The selected
+model is refit on the combined train and validation folds, and the test fold is used once for the
+final performance estimate. The fitted bundle records its data hash, feature order, category
+levels, package versions, selection settings, and test metrics in `models/public_demo/metadata.json`.
 
 ## Performance
 
-LightGBM used a five-fold training-fold sweep over three small parameter combinations. The selected
-settings were `learning_rate=0.05` and `num_leaves=31`; early stopping selected 166 trees on the
-validation fold. Performance on the untouched test fold was:
+| Metric | Logistic baseline | LightGBM |
+|---|---:|---:|
+| AUC | 0.6563 | 0.6774 |
+| Gini | 0.3127 | 0.3547 |
+| KS | 0.2319 | 0.2611 |
+| Brier score | 0.0723 | 0.0716 |
+| PR-AUC | 0.1444 | 0.1612 |
+| Log loss | 0.2691 | 0.2652 |
 
-| metric | result |
-|---|---:|
-| AUC | 0.678678 |
-| Gini | 0.357355 |
-| KS | 0.259713 |
-| Brier score | 0.071635 |
+The logistic model uses the same 15 fields and the same train/validation and test partitions as
+LightGBM. The result shows a modest discrimination and probability-error improvement on this one
+historical split. It does not establish out-of-time stability, portability, or commercial value.
 
-These numbers describe ranking and probability error on this one historical dataset. They are not
-a promise of performance elsewhere. `reports/model_comparison.md` also shows a logistic benchmark
-with a different, bureau-rich input set. Its stronger reported result should not be treated as a
-head-to-head win or loss against this deployment profile.
+At the illustrative threshold of 0.140351, the test-fold approval rate is 89.25%, default recall
+among declined applications is 25.86%, and observed default precision among declines is 19.42%.
+The calibration intercept is 0.1336 and slope is 1.0560. These are diagnostics, not operating
+targets; the full matrix and assumptions are in [threshold analysis](threshold_analysis.md).
 
-One test fold is not stability evidence.
+## Explanations and loss estimates
 
-Because the test set comes from the same competition dataset and period as the training data, it
-cannot show whether a changed applicant mix, product terms, data-capture process, macroeconomy or
-recovery practice would alter calibration or approval rates; that needs out-of-time local monitoring.
+Each response includes the three largest local SHAP contributions. They describe how fitted model
+features moved a score relative to the model baseline; they are not causal findings or legally
+sufficient adverse-action reasons. Raw day-count features are translated into years and amounts
+into dataset monetary units before being shown.
 
-## Decision and ECL assumptions
+The dashboard displays an illustrative 12-month loss estimate: `PD × 45% LGD × requested credit`.
+It is not an IFRS 9 provision. The separate ECL report adds stage assignment, survival-weighted
+monthly hazards, scenario weighting, and discounting on fixed accounts. It still lacks observed
+recoveries, contractual cash flows, and account-level PD history.
 
-The public API approves an application below a PD threshold of 0.140351. The figure follows from
-the project assumptions: 12% performing margin, 2% operating cost, 2% capital cost and 45% LGD.
-Changing product pricing, capital treatment or LGD changes the cutoff. It is a teaching rule, not a
-policy threshold.
+## Fairness, governance, and monitoring
 
-The API's displayed loss estimate is `PD x 45% x requested credit`. The separate ECL demonstration
-adds 12-month versus lifetime horizons, discounted cash flows and weighted macroeconomic scenarios.
-Neither layer has observed recovery data, amortisation schedules or an account-level PD history, so
-neither can be used for accounting provision.
+Gender is kept only for an offline test-fold diagnostic and is absent from the served inputs. The
+fairness audit shows a gender approval-rate difference and differing group error rates under the
+illustrative threshold. Removing a direct feature does not remove proxy risk. This analysis is not
+a disparate-impact assessment, legal review, or production monitoring programme.
 
-## Fairness and monitoring
-
-Gender is available only to the offline fairness audit. On the test fold, approval was 91.81% for
-the F group and 84.02% for the M group under the illustrative threshold. Removing gender from the
-model does not prove that proxy effects have disappeared. `reports/fairness_audit.md` reports the
-group sizes, default rates, calibration error, true-positive rate and false-positive rate behind
-that statement.
-
-A real deployment would require local outcomes, governance review, independent validation,
-adverse-action controls, stability monitoring, outcome feedback and a retraining-governance process.
-Those controls are outside this repository.
+A real deployment would need local outcome data, legal and policy review, independent validation,
+data-quality controls, reason-code governance, drift monitoring, retraining approval, and human
+oversight. None of those controls can be inferred from the Home Credit competition data.

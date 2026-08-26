@@ -15,9 +15,7 @@ class ApplicantRequest(BaseModel):
     credit_amount: float = Field(
         ..., gt=0, description="Requested loan amount in dataset monetary units"
     )
-    annuity: float = Field(
-        ..., gt=0, description="Monthly repayment in dataset monetary units"
-    )
+    annuity: float = Field(..., gt=0, description="Monthly repayment in dataset monetary units")
     goods_price: float | None = Field(
         None, gt=0, description="Price of goods financed, if applicable"
     )
@@ -81,7 +79,9 @@ class PredictResponse(BaseModel):
         ..., description="Illustrative 12-month loss in dataset monetary units: PD x LGD x EAD"
     )
     lgd_assumption: float
-    expected_value: float = Field(..., description="Illustrative expected value in dataset monetary units")
+    expected_value: float = Field(
+        ..., description="Illustrative expected value in dataset monetary units"
+    )
     model_name: str
     model_version: str
     model_profile: Literal["public_demo"]
