@@ -1,0 +1,112 @@
+{
+  "category_levels": {
+    "FLAG_OWN_CAR": [
+      "N",
+      "Y"
+    ],
+    "FLAG_OWN_REALTY": [
+      "N",
+      "Y"
+    ],
+    "NAME_CONTRACT_TYPE": [
+      "Cash loans",
+      "Revolving loans"
+    ],
+    "NAME_EDUCATION_TYPE": [
+      "Academic degree",
+      "Higher education",
+      "Incomplete higher",
+      "Lower secondary",
+      "Secondary / secondary special"
+    ],
+    "NAME_FAMILY_STATUS": [
+      "Civil marriage",
+      "Married",
+      "Separated",
+      "Single / not married",
+      "Unknown",
+      "Widow"
+    ],
+    "NAME_INCOME_TYPE": [
+      "Businessman",
+      "Commercial associate",
+      "Maternity leave",
+      "Pensioner",
+      "State servant",
+      "Student",
+      "Unemployed",
+      "Working"
+    ],
+    "OCCUPATION_TYPE": [
+      "Accountants",
+      "Cleaning staff",
+      "Cooking staff",
+      "Core staff",
+      "Drivers",
+      "HR staff",
+      "High skill tech staff",
+      "IT staff",
+      "Laborers",
+      "Low-skill Laborers",
+      "Managers",
+      "Medicine staff",
+      "Private service staff",
+      "Realty agents",
+      "Sales staff",
+      "Secretaries",
+      "Security staff",
+      "Waiters/barmen staff"
+    ]
+  },
+  "dataset_sha256": "52e96b895b1112e1c853f670e58372719c8441c5ed1c57ac2f7fad559d784f5f",
+  "feature_names": [
+    "NAME_CONTRACT_TYPE",
+    "DAYS_BIRTH",
+    "DAYS_EMPLOYED",
+    "AMT_INCOME_TOTAL",
+    "AMT_CREDIT",
+    "AMT_ANNUITY",
+    "AMT_GOODS_PRICE",
+    "FLAG_OWN_CAR",
+    "FLAG_OWN_REALTY",
+    "CNT_CHILDREN",
+    "CNT_FAM_MEMBERS",
+    "NAME_EDUCATION_TYPE",
+    "NAME_INCOME_TYPE",
+    "NAME_FAMILY_STATUS",
+    "OCCUPATION_TYPE"
+  ],
+  "git_revision": "0ffecb10f9eb7b4c5aebd957be632f8f82e78ff1",
+  "model_name": "LightGBMClassifier",
+  "model_version": "1.2.0",
+  "package_versions": {
+    "lightgbm": "4.6.0",
+    "numpy": "1.26.4",
+    "pandas": "2.2.3",
+    "scikit-learn": "1.5.2"
+  },
+  "profile": "public_demo",
+  "random_seed": 42,
+  "selection": {
+    "early_stopping_iteration": 193,
+    "parameters": {
+      "learning_rate": 0.05,
+      "num_leaves": 31
+    },
+    "refit_rows": 246008
+  },
+  "split_rows": {
+    "test": 61503,
+    "train": 184506,
+    "validation": 61502
+  },
+  "test_metrics": {
+    "AUC": 0.677370713463237,
+    "Brier": 0.07160176656203984,
+    "Gini": 0.3547414269264739,
+    "KS": 0.26108462303085406,
+    "LogLoss": 0.26516725147802966,
+    "PR_AUC": 0.16115946149581065
+  },
+  "trained_at_utc": "2026-08-26T20:50:48.107321+00:00"
+}

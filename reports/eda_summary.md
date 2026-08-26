@@ -12,7 +12,7 @@
 
 3. **The three `EXT_SOURCE_*` columns dominate the correlation table.** EXT_SOURCE_3 correlates -0.179 with `TARGET`, more than any other raw feature in this table. They are external credit-bureau scores. The deployed public-demo model deliberately excludes them because an applicant cannot supply them.
 
-4. **Income and credit amount are heavily right-skewed.** A handful of applicants report incomes in the tens of millions; the histograms clip at the 99th percentile so the bulk of the distribution is visible at all. Tree models handle this natively, but the logistic baseline will need a log transform.
+4. **Income and credit amount are heavily right-skewed.** A handful of applicants report incomes in the tens of millions; the histograms clip at the 99th percentile so the bulk of the distribution is visible at all. The tree model uses the raw values; the logistic baseline standardises its numeric inputs.
 
 5. **`DAYS_BIRTH` correlates 0.078 with `TARGET`.** Younger applicants default more often, which is consistent with having less credit history to underwrite against. It is not a causal age effect and shouldn't be read as one.
 

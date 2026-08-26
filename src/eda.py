@@ -104,8 +104,8 @@ def write_eda_summary(df: pd.DataFrame, missing: pd.DataFrame, corr: pd.Series, 
         "",
         "4. **Income and credit amount are heavily right-skewed.** A handful of applicants report "
         "incomes in the tens of millions; the histograms clip at the 99th percentile so the bulk "
-        "of the distribution is visible at all. Tree models handle this natively, but the logistic "
-        "baseline will need a log transform.",
+        "of the distribution is visible at all. The tree model uses the raw values; the logistic "
+        "baseline standardises its numeric inputs.",
         "",
         f"5. **`DAYS_BIRTH` correlates {corr.get('DAYS_BIRTH', 0):.3f} with `TARGET`.** Younger "
         "applicants default more often, which is consistent with having less credit history to "

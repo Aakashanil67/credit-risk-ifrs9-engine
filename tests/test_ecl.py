@@ -16,9 +16,9 @@ def test_mechanics_examples_use_explicit_stage_rules() -> None:
     examples = build_mechanics_examples()
 
     assert examples["stage_name"].tolist() == [
-        "Stage 1 — performing",
-        "Stage 2 — significant increase in credit risk",
-        "Stage 3 — credit-impaired",
+        "Stage 1 - performing",
+        "Stage 2 - significant increase in credit risk",
+        "Stage 3 - credit-impaired",
     ]
 
 
