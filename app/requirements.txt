@@ -2,7 +2,7 @@
 # root, so this is the one it reads. It's a deliberate subset: only what app/dashboard.py's serving
 # chain (api.scoring, schemas, reason codes and model artifacts) needs at runtime. Training-only
 # packages are left out on purpose, keeping the hosted app small and its dependency graph clear.
-pandas==2.2.3
+pandas==3.0.5
 numpy==1.26.4
 scipy==1.13.1
 scikit-learn==1.5.2
