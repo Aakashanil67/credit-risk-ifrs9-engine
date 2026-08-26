@@ -60,10 +60,7 @@ def discounted_scenario_ecl(
     for month in range(1, horizon + 1):
         marginal_default_probability = survival * monthly_hazard
         discounted_loss += (
-            marginal_default_probability
-            * scenario.lgd
-            * ead
-            / (1 + annual_eir) ** (month / 12)
+            marginal_default_probability * scenario.lgd * ead / (1 + annual_eir) ** (month / 12)
         )
         survival *= 1 - monthly_hazard
     return scenario.weight * discounted_loss

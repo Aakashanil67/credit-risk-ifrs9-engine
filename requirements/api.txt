@@ -1,12 +1,11 @@
-# Runtime dependencies for api/Dockerfile. Training and scorecard dependencies stay in the root
-# requirements.txt because the request path never imports them.
+# Runtime dependencies for api/Dockerfile. Development tooling stays in the root requirements file.
 pandas==2.2.3
 numpy==1.26.4
 scipy==1.13.1
 scikit-learn==1.5.2
-lightgbm==4.5.0
+lightgbm==4.6.0
 shap==0.46.0
-fastapi==0.115.5
-uvicorn[standard]==0.32.1
-joblib==1.4.2
-pydantic==2.9.2
+fastapi==0.141.1
+uvicorn[standard]==0.52.4
+joblib==1.5.3
+pydantic==2.13.4

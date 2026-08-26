@@ -10,7 +10,7 @@
 
 2. **`DAYS_EMPLOYED` has a sentinel-value bug.** 18.0% of rows carry the value 365243 (1,000 years), which is Home Credit's placeholder for 'not currently employed', not a real employment tenure. Left untreated it wrecks any model that uses employment length linearly.
 
-3. **The three `EXT_SOURCE_*` columns dominate the correlation table.** EXT_SOURCE_3 correlates -0.179 with `TARGET`, more than any engineered feature in this table. They're external credit-bureau scores, and the model will lean on them heavily.
+3. **The three `EXT_SOURCE_*` columns dominate the correlation table.** EXT_SOURCE_3 correlates -0.179 with `TARGET`, more than any other raw feature in this table. They are external credit-bureau scores. The deployed public-demo model deliberately excludes them because an applicant cannot supply them.
 
 4. **Income and credit amount are heavily right-skewed.** A handful of applicants report incomes in the tens of millions; the histograms clip at the 99th percentile so the bulk of the distribution is visible at all. Tree models handle this natively, but the logistic baseline will need a log transform.
 

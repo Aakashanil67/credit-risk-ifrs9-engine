@@ -18,7 +18,7 @@ from src.reason_codes import reason_codes
 
 
 class InvalidApplicantError(ValueError):
-    """A supplied category is outside the fitted application model's contract."""
+    """A supplied category is outside the fitted public-demo contract."""
 
     def __init__(self, field: str, detail: str) -> None:
         super().__init__(detail)
@@ -49,7 +49,6 @@ def load_artifacts() -> dict:
     bundle = load_artifact_bundle(model_bundle_dir("public_demo"))
     return {
         "model": bundle.model,
-        "train_medians": bundle.train_medians,
         "cat_dtypes": bundle.category_dtypes,
         "metadata": bundle.metadata,
         "feature_names": bundle.metadata["feature_names"],
@@ -103,7 +102,7 @@ def score_applicant(
 
     explanation = artifacts["explainer"](row)
     shap_row = pd.Series(explanation.values[0], index=row.columns)
-    codes = reason_codes(shap_row, row.iloc[0], artifacts["train_medians"], top_n=3)
+    codes = reason_codes(shap_row, row.iloc[0], top_n=3)
 
     # This is an illustrative 12-month loss estimate, not a portfolio IFRS 9 calculation.
     ecl = pd_estimate * lgd * req.credit_amount

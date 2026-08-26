@@ -1,43 +1,15 @@
-"""Feature contracts for the benchmark and application-time PD models."""
+"""Feature contract for the deployed public-demo PD model."""
 
 from enum import StrEnum
 
 
 class ModelProfile(StrEnum):
-    FULL = "full"
-    APPLICATION = "application"
     PUBLIC_DEMO = "public_demo"
 
 
-# Kept for offline fairness analysis only. It is never a decision feature.
-PROTECTED_AUDIT_COLUMNS = ["CODE_GENDER"]
-
-APPLICATION_FEATURES = [
-    "NAME_CONTRACT_TYPE",
-    "DAYS_BIRTH",
-    "DAYS_EMPLOYED",
-    "AMT_INCOME_TOTAL",
-    "AMT_CREDIT",
-    "AMT_ANNUITY",
-    "AMT_GOODS_PRICE",
-    "FLAG_OWN_CAR",
-    "FLAG_OWN_REALTY",
-    "CNT_CHILDREN",
-    "CNT_FAM_MEMBERS",
-    "NAME_EDUCATION_TYPE",
-    "NAME_INCOME_TYPE",
-    "NAME_FAMILY_STATUS",
-    "OCCUPATION_TYPE",
-    "ORGANIZATION_TYPE",
-    "REGION_POPULATION_RELATIVE",
-    "OWN_CAR_AGE",
-]
-
-
 # These are the fields the public dashboard can collect without inventing a value for a feature
-# that was complete in Home Credit's training table. The service is deliberately narrower than the
-# historical application profile: organisation type and regional density are dataset-specific, and
-# a visitor cannot reasonably supply either one.
+# that was complete in Home Credit's training table. Organisation type and regional density are
+# dataset-specific, and a visitor cannot reasonably supply either one.
 PUBLIC_DEMO_FEATURES = [
     "NAME_CONTRACT_TYPE",
     "DAYS_BIRTH",

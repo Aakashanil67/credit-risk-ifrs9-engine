@@ -18,8 +18,6 @@ from importlib.metadata import version
 from pathlib import Path
 
 import lightgbm as lgb
-import mlflow
-import mlflow.lightgbm
 import numpy as np
 import pandas as pd
 from sklearn.metrics import roc_auc_score
@@ -27,7 +25,6 @@ from sklearn.model_selection import StratifiedKFold
 
 from src.artifacts import ArtifactBundle, save_artifact_bundle
 from src.config import (
-    MLFLOW_EXPERIMENT_NAME,
     RANDOM_SEED,
     REPORTS_DIR,
     TARGET_COL,
@@ -186,23 +183,16 @@ def score_model(y_true: pd.Series, y_pred: np.ndarray) -> dict[str, float]:
     }
 
 
-def train_and_log_variant(
+def train_variant(
     train_X: pd.DataFrame,
     train_y: pd.Series,
     val_X: pd.DataFrame,
     val_y: pd.Series,
     params: dict,
-    run_name: str,
 ) -> tuple[dict[str, float], int, lgb.LGBMClassifier]:
-    """Fit one LightGBM variant, log it to MLflow, return its validation metrics, stopping iteration, and the model."""
-    mlflow.set_experiment(MLFLOW_EXPERIMENT_NAME)
-    with mlflow.start_run(run_name=run_name):
-        mlflow.log_params(params)
-        model = fit_final_model(train_X, train_y, val_X, val_y, params)
-        metrics = score_model(val_y, model.predict_proba(val_X)[:, 1])
-        mlflow.log_param("best_iteration", model.best_iteration_)
-        mlflow.log_metrics({k.lower(): v for k, v in metrics.items()})
-        mlflow.lightgbm.log_model(model, "model")
+    """Fit one validation variant and return its metrics, stopping iteration, and fitted model."""
+    model = fit_final_model(train_X, train_y, val_X, val_y, params)
+    metrics = score_model(val_y, model.predict_proba(val_X)[:, 1])
     return metrics, model.best_iteration_, model
 
 
@@ -231,9 +221,9 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Train a LightGBM PD model")
     parser.add_argument(
         "--profile",
-        choices=[profile.value for profile in ModelProfile],
+        choices=[ModelProfile.PUBLIC_DEMO.value],
         default=ModelProfile.PUBLIC_DEMO.value,
-        help="public_demo is the deployed contract; full and application are retained for offline analysis",
+        help="the public-demo contract served by the API and dashboard",
     )
     return parser.parse_args()
 
@@ -257,8 +247,8 @@ def main() -> None:
     best_params = cv_select_params(train_X, train_y)
     print(f"selected {best_params}")
 
-    validation_metrics, best_iteration, _selection_model = train_and_log_variant(
-        train_X, train_y, val_X, val_y, best_params, run_name="lgbm_tuned"
+    validation_metrics, best_iteration, _selection_model = train_variant(
+        train_X, train_y, val_X, val_y, best_params
     )
     print(f"LightGBM validation: {validation_metrics}")
 
@@ -279,7 +269,6 @@ def main() -> None:
     save_artifact_bundle(
         ArtifactBundle(
             model=model,
-            train_medians=development_X.select_dtypes("number").median(),
             category_dtypes=cat_dtypes,
             metadata=training_metadata(
                 profile,

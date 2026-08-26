@@ -117,7 +117,10 @@ with st.form("applicant_form"):
         )
         occupation = st.selectbox(
             "Occupation",
-            ["Not provided", *category_options("OCCUPATION_TYPE", ["Laborers", "Sales staff", "Managers"])],
+            [
+                "Not provided",
+                *category_options("OCCUPATION_TYPE", ["Laborers", "Sales staff", "Managers"]),
+            ],
         )
 
     with col3:

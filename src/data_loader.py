@@ -35,8 +35,9 @@ def write_data_dictionary(df: pd.DataFrame, missing: pd.DataFrame, out_path: Pat
         "# Data dictionary: application_train.csv",
         "",
         f"{df.shape[0]:,} rows, {df.shape[1]} columns. One row is one loan application; "
-        f"`{TARGET_COL}` is 1 if the client had a payment more than X days late on at "
-        "least one installment (Home Credit's definition of default), 0 otherwise.",
+        f"`{TARGET_COL}` is 1 when the competition marks an applicant as having payment "
+        "difficulty, 0 otherwise. Home Credit intentionally withholds the exact delinquency-day "
+        "threshold in the public data, so this project does not invent one.",
         "",
         f"Target balance: {balance['repaid (0)']:.1%} repaid against "
         f"{balance['defaulted (1)']:.1%} defaulted, "

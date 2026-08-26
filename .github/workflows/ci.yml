@@ -24,6 +24,15 @@ jobs:
 
       - run: pytest -v
 
+      - name: Audit pinned direct dependencies
+        run: pip-audit --no-deps -r requirements.txt
+
+      - name: Audit API runtime pins
+        run: pip-audit --no-deps -r requirements/api.txt
+
+      - name: Audit dashboard runtime pins
+        run: pip-audit --no-deps -r app/requirements.txt
+
   docker-build:
     runs-on: ubuntu-latest
     steps:
@@ -34,3 +43,17 @@ jobs:
 
       - name: Build dashboard image
         run: docker build -f app/Dockerfile -t credit-risk-dashboard .
+
+      - name: Smoke test the standalone API image
+        run: |
+          docker run --detach --name credit-risk-api-smoke -p 8000:8000 credit-risk-api
+          for attempt in {1..30}; do
+            if curl --fail --silent http://localhost:8000/health; then break; fi
+            sleep 2
+          done
+          curl --fail --silent --show-error http://localhost:8000/health | grep '"model_loaded":true'
+          curl --fail --silent --show-error --request POST http://localhost:8000/predict \
+            --header 'Content-Type: application/json' \
+            --data '{"age_years":35,"years_employed":5,"income_total":180000,"credit_amount":450000,"annuity":22500,"goods_price":450000,"num_children":1,"family_members":3,"education":"Higher education"}' \
+            | grep '"model_profile":"public_demo"'
+          docker logs credit-risk-api-smoke

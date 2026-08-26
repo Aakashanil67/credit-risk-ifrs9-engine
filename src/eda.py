@@ -99,8 +99,8 @@ def write_eda_summary(df: pd.DataFrame, missing: pd.DataFrame, corr: pd.Series, 
         "",
         f"3. **The three `EXT_SOURCE_*` columns dominate the correlation table.** "
         f"{top_corr.index[0]} correlates {top_corr.iloc[0]:.3f} with `TARGET`, more than any "
-        "engineered feature in this table. They're external credit-bureau scores, and the model "
-        "will lean on them heavily.",
+        "other raw feature in this table. They are external credit-bureau scores. The deployed "
+        "public-demo model deliberately excludes them because an applicant cannot supply them.",
         "",
         "4. **Income and credit amount are heavily right-skewed.** A handful of applicants report "
         "incomes in the tens of millions; the histograms clip at the 99th percentile so the bulk "
