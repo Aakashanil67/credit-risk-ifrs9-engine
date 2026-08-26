@@ -12,16 +12,24 @@ import numpy as np
 import pandas as pd
 
 from src.config import ID_COL, TARGET_COL
-from src.model_profiles import APPLICATION_FEATURES, PROTECTED_AUDIT_COLUMNS, ModelProfile
+from src.model_profiles import (
+    APPLICATION_FEATURES,
+    PROTECTED_AUDIT_COLUMNS,
+    PUBLIC_DEMO_FEATURES,
+    ModelProfile,
+)
 
 
 def build_lgbm_features(df: pd.DataFrame, profile: ModelProfile) -> pd.DataFrame:
     """Build the exact feature matrix declared by a model profile."""
-    if profile is ModelProfile.APPLICATION:
-        missing = [feature for feature in APPLICATION_FEATURES if feature not in df]
+    if profile in {ModelProfile.APPLICATION, ModelProfile.PUBLIC_DEMO}:
+        profile_features = (
+            APPLICATION_FEATURES if profile is ModelProfile.APPLICATION else PUBLIC_DEMO_FEATURES
+        )
+        missing = [feature for feature in profile_features if feature not in df]
         if missing:
-            raise ValueError(f"Application profile is missing required features: {missing}")
-        X = df[APPLICATION_FEATURES].copy()
+            raise ValueError(f"{profile.value} profile is missing required features: {missing}")
+        X = df[profile_features].copy()
     elif profile is ModelProfile.FULL:
         excluded = {ID_COL, TARGET_COL, *PROTECTED_AUDIT_COLUMNS}
         X = df[[column for column in df.columns if column not in excluded]].copy()

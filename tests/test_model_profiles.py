@@ -1,7 +1,7 @@
 import pandas as pd
 import pytest
 
-from src.model_profiles import APPLICATION_FEATURES, ModelProfile
+from src.model_profiles import APPLICATION_FEATURES, PUBLIC_DEMO_FEATURES, ModelProfile
 
 
 def test_application_profile_uses_the_declared_inputs_and_excludes_gender():
@@ -22,6 +22,21 @@ def test_application_profile_uses_the_declared_inputs_and_excludes_gender():
 
     assert list(features.columns) == APPLICATION_FEATURES
     assert "CODE_GENDER" not in features
+
+
+def test_public_demo_profile_contains_only_fields_a_visitor_can_supply():
+    from src.features import build_lgbm_features
+
+    row = {"SK_ID_CURR": 1, "TARGET": 0, "CODE_GENDER": "F", "DAYS_EMPLOYED": -500}
+    for feature in PUBLIC_DEMO_FEATURES:
+        row.setdefault(feature, "Working")
+
+    features = build_lgbm_features(pd.DataFrame([row]), profile=ModelProfile.PUBLIC_DEMO)
+
+    assert list(features.columns) == PUBLIC_DEMO_FEATURES
+    assert "ORGANIZATION_TYPE" not in features
+    assert "REGION_POPULATION_RELATIVE" not in features
+    assert "OWN_CAR_AGE" not in features
 
 
 def test_application_profile_names_missing_inputs_instead_of_raising_key_error():
