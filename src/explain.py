@@ -7,6 +7,8 @@ what makes "top 3 SHAP drivers" a defensible sentence rather than a hand-wave: t
 features really did account for most of the gap between this applicant's score and the average.
 """
 
+import argparse
+
 import joblib
 import numpy as np
 import pandas as pd
@@ -15,7 +17,8 @@ from matplotlib import pyplot as plt
 from sklearn.calibration import calibration_curve
 from sklearn.metrics import brier_score_loss
 
-from src.config import FIGURES_DIR, LGBM_MODEL_PATH, RANDOM_SEED, TARGET_COL
+from src.artifacts import load_artifact_bundle
+from src.config import FIGURES_DIR, LGBM_MODEL_PATH, RANDOM_SEED, TARGET_COL, model_bundle_dir
 from src.data_loader import load_application_data
 from src.features import build_lgbm_features
 from src.model_profiles import ModelProfile
@@ -27,6 +30,7 @@ SHAP_SAMPLE_SIZE = (
 )
 
 def load_or_train_model():
+    """Load the legacy full-information model used by the historical portfolio ECL script."""
     if not LGBM_MODEL_PATH.exists():
         raise FileNotFoundError(
             f"{LGBM_MODEL_PATH} not found — run `python -m src.train_lgbm` first to train and save it."
@@ -34,9 +38,26 @@ def load_or_train_model():
     return joblib.load(LGBM_MODEL_PATH)
 
 
+def load_model_bundle(profile: ModelProfile):
+    """Load the versioned model bundle selected for an explainability run."""
+    return load_artifact_bundle(model_bundle_dir(profile.value))
+
+
 def compute_shap_values(model, X: pd.DataFrame) -> shap.Explanation:
     explainer = shap.TreeExplainer(model)
     return explainer(X)
+
+
+def shap_raw_scores(base_values: np.ndarray, shap_values: np.ndarray) -> np.ndarray:
+    """Reconstruct LightGBM's raw margin from Tree SHAP's additive components."""
+    return np.asarray(base_values) + np.asarray(shap_values).sum(axis=1)
+
+
+def validate_shap_additivity(model, X: pd.DataFrame, explanation: shap.Explanation) -> None:
+    """Fail if the explanation stops reconstructing the model's raw output."""
+    expected = model.predict(X, raw_score=True)
+    actual = shap_raw_scores(explanation.base_values, explanation.values)
+    np.testing.assert_allclose(actual, expected, rtol=1e-6, atol=1e-6)
 
 
 def save_current_shap_plot(out_path) -> None:
@@ -81,31 +102,44 @@ def plot_calibration_curve(calibration: dict, out_path) -> None:
     plt.close(fig)
 
 
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description="Create SHAP plots for a versioned model bundle")
+    parser.add_argument(
+        "--profile",
+        choices=[profile.value for profile in ModelProfile],
+        default=ModelProfile.APPLICATION.value,
+    )
+    return parser.parse_args()
+
+
 def main() -> None:
+    args = parse_args()
+    profile = ModelProfile(args.profile)
     df = load_application_data()
-    train, val, _test = split_data(df, seed=RANDOM_SEED)
+    _train, val, _test = split_data(df, seed=RANDOM_SEED)
 
-    model = load_or_train_model()
+    bundle = load_model_bundle(profile)
+    model = bundle.model
 
-    val_X = build_lgbm_features(val, profile=ModelProfile.FULL)
+    val_X = build_lgbm_features(val, profile=profile)
     sample = val_X.sample(n=SHAP_SAMPLE_SIZE, random_state=RANDOM_SEED)
     explanation = compute_shap_values(model, sample)
+    validate_shap_additivity(model, sample, explanation)
 
     FIGURES_DIR.mkdir(parents=True, exist_ok=True)
 
     plt.figure()
     shap.plots.beeswarm(explanation, show=False, max_display=15)
-    save_current_shap_plot(FIGURES_DIR / "shap_beeswarm.png")
+    save_current_shap_plot(FIGURES_DIR / f"{profile.value}_shap_beeswarm.png")
 
     plt.figure()
     shap.plots.bar(explanation, show=False, max_display=15)
-    save_current_shap_plot(FIGURES_DIR / "shap_bar.png")
+    save_current_shap_plot(FIGURES_DIR / f"{profile.value}_shap_bar.png")
 
-    print("wrote reports/figures/shap_beeswarm.png and shap_bar.png")
+    print(f"wrote {profile.value}_shap_beeswarm.png and {profile.value}_shap_bar.png")
 
     # per-applicant waterfall + reason codes for the two highest-risk applicants in the sample
-    train_X = build_lgbm_features(train, profile=ModelProfile.FULL)
-    train_medians = train_X.select_dtypes("number").median()
+    train_medians = bundle.train_medians
 
     proba = model.predict_proba(sample)[:, 1]
     riskiest = np.argsort(proba)[-2:][::-1]
@@ -116,7 +150,7 @@ def main() -> None:
 
         plt.figure()
         shap.plots.waterfall(explanation[row_idx], show=False, max_display=10)
-        save_current_shap_plot(FIGURES_DIR / f"shap_waterfall_applicant_{rank}.png")
+        save_current_shap_plot(FIGURES_DIR / f"{profile.value}_shap_waterfall_applicant_{rank}.png")
 
         codes = reason_codes(shap_row, feature_row, train_medians)
         print(f"applicant SK_ID_CURR={applicant_id} (PD={proba[row_idx]:.3f}):")
@@ -126,7 +160,7 @@ def main() -> None:
     # calibration on the full validation set, not just the SHAP sample — more stable bin estimates
     full_val_pred = model.predict_proba(val_X)[:, 1]
     calibration = calibration_summary(val[TARGET_COL], full_val_pred)
-    plot_calibration_curve(calibration, FIGURES_DIR / "calibration_curve.png")
+    plot_calibration_curve(calibration, FIGURES_DIR / f"{profile.value}_calibration_curve.png")
     print(f"Brier score: {calibration['brier_score']:.4f}")
 
 
