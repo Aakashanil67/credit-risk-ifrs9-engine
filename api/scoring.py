@@ -14,7 +14,7 @@ from src.config import (
     model_bundle_dir,
 )
 from src.decision_policy import DecisionPolicy
-from src.explain import reason_codes
+from src.reason_codes import reason_codes
 
 
 class InvalidApplicantError(ValueError):
