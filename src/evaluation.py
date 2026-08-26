@@ -4,7 +4,13 @@ from dataclasses import dataclass
 
 import numpy as np
 from scipy.stats import ks_2samp
-from sklearn.metrics import brier_score_loss, confusion_matrix, roc_auc_score
+from sklearn.metrics import (
+    average_precision_score,
+    brier_score_loss,
+    confusion_matrix,
+    log_loss,
+    roc_auc_score,
+)
 
 
 @dataclass(frozen=True)
@@ -13,6 +19,8 @@ class BinaryMetrics:
     gini: float
     ks: float
     brier: float
+    pr_auc: float
+    log_loss: float
 
 
 @dataclass(frozen=True)
@@ -35,6 +43,8 @@ def binary_metrics(y_true: np.ndarray, pd_score: np.ndarray) -> BinaryMetrics:
         gini=2 * auc - 1,
         ks=float(ks_2samp(pd_score[y_true == 1], pd_score[y_true == 0]).statistic),
         brier=float(brier_score_loss(y_true, pd_score)),
+        pr_auc=float(average_precision_score(y_true, pd_score)),
+        log_loss=float(log_loss(y_true, pd_score, labels=[0, 1])),
     )
 
 
