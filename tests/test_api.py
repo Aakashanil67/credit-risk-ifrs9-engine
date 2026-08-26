@@ -12,8 +12,8 @@ from src.config import model_bundle_dir
 # available in a fresh CI checkout (the dataset can't be committed under Kaggle's terms), so skip
 # cleanly there instead of failing on a FileNotFoundError that has nothing to do with the code.
 pytestmark = pytest.mark.skipif(
-    not model_bundle_dir("application").exists(),
-    reason="requires the application model bundle — run `python -m src.train_lgbm --profile application`",
+    not model_bundle_dir("public_demo").exists(),
+    reason="requires the public-demo model bundle — run `python -m src.train_lgbm --profile public_demo`",
 )
 
 VALID_APPLICANT = {
@@ -42,8 +42,8 @@ def test_health_reports_model_loaded(client: TestClient) -> None:
     assert response.json() == {"status": "ok", "model_loaded": True}
 
 
-def test_openapi_version_tracks_the_application_release(client: TestClient) -> None:
-    assert client.get("/openapi.json").json()["info"]["version"] == "1.1.0"
+def test_openapi_version_tracks_the_public_demo_release(client: TestClient) -> None:
+    assert client.get("/openapi.json").json()["info"]["version"] == "1.2.0"
 
 
 def test_predict_returns_all_expected_fields(client: TestClient) -> None:
@@ -57,7 +57,7 @@ def test_predict_returns_all_expected_fields(client: TestClient) -> None:
     assert len(body["reason_codes"]) == 3
     assert body["expected_credit_loss"] >= 0
     assert body["lgd_assumption"] == pytest.approx(0.45)
-    assert body["model_profile"] == "application"
+    assert body["model_profile"] == "public_demo"
     assert body["model_name"] == "LightGBMClassifier"
 
 
@@ -139,7 +139,7 @@ def test_422_body_is_flat_field_message_list_not_nested_loc_dicts(client: TestCl
 
 
 def test_predict_accepts_age_at_lower_boundary(client: TestClient) -> None:
-    applicant = {**VALID_APPLICANT, "age_years": 18}
+    applicant = {**VALID_APPLICANT, "age_years": 18, "years_employed": 2}
     response = client.post("/predict", json=applicant)
     assert response.status_code == 200
 
@@ -158,9 +158,7 @@ def test_predict_rejects_zero_income(client: TestClient) -> None:
     assert response.status_code == 422
 
 
-def test_predict_accepts_missing_optional_bureau_and_car_fields(client: TestClient) -> None:
-    """No goods_price, own_car_age, region_population_relative, occupation, organization_type —
-    the exact shape of a new applicant with no bureau file or car yet."""
+def test_predict_accepts_missing_optional_goods_price_and_occupation(client: TestClient) -> None:
     minimal = {
         "age_years": 25,
         "income_total": 120_000,
@@ -202,8 +200,7 @@ def test_predict_rejects_extra_unknown_fields(client: TestClient) -> None:
     assert response.status_code == 422
 
 
-def test_absent_optional_numeric_fields_stay_numeric_for_lightgbm():
-    """A one-row DataFrame otherwise infers object dtype when both values are absent."""
+def test_defaulted_goods_price_stays_numeric_for_lightgbm():
     artifacts = load_artifacts()
     request = ApplicantRequest(
         age_years=25,
@@ -214,5 +211,4 @@ def test_absent_optional_numeric_fields_stay_numeric_for_lightgbm():
 
     row = applicant_to_row(request, artifacts["feature_names"], artifacts["cat_dtypes"])
 
-    assert pd.api.types.is_float_dtype(row["REGION_POPULATION_RELATIVE"])
-    assert pd.api.types.is_float_dtype(row["OWN_CAR_AGE"])
+    assert pd.api.types.is_float_dtype(row["AMT_GOODS_PRICE"])

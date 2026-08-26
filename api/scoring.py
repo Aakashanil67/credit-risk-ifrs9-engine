@@ -18,7 +18,7 @@ from src.reason_codes import reason_codes
 
 
 class InvalidApplicantError(ValueError):
-    """A supplied category is outside the fitted application model's contract."""
+    """A supplied category is outside the fitted public-demo contract."""
 
     def __init__(self, field: str, detail: str) -> None:
         super().__init__(detail)
@@ -31,7 +31,6 @@ CATEGORY_FIELD_NAMES = {
     "NAME_INCOME_TYPE": "income_type",
     "NAME_FAMILY_STATUS": "family_status",
     "OCCUPATION_TYPE": "occupation",
-    "ORGANIZATION_TYPE": "organization_type",
 }
 
 NUMERIC_FEATURES = {
@@ -43,16 +42,13 @@ NUMERIC_FEATURES = {
     "AMT_GOODS_PRICE",
     "CNT_CHILDREN",
     "CNT_FAM_MEMBERS",
-    "REGION_POPULATION_RELATIVE",
-    "OWN_CAR_AGE",
 }
 
 
 def load_artifacts() -> dict:
-    bundle = load_artifact_bundle(model_bundle_dir("application"))
+    bundle = load_artifact_bundle(model_bundle_dir("public_demo"))
     return {
         "model": bundle.model,
-        "train_medians": bundle.train_medians,
         "cat_dtypes": bundle.category_dtypes,
         "metadata": bundle.metadata,
         "feature_names": bundle.metadata["feature_names"],
@@ -79,9 +75,6 @@ def applicant_to_row(
         "NAME_INCOME_TYPE": req.income_type,
         "NAME_FAMILY_STATUS": req.family_status,
         "OCCUPATION_TYPE": req.occupation,
-        "ORGANIZATION_TYPE": req.organization_type,
-        "REGION_POPULATION_RELATIVE": req.region_population_relative,
-        "OWN_CAR_AGE": req.own_car_age,
     }
     row = pd.DataFrame([raw]).reindex(columns=feature_names)
     for column in NUMERIC_FEATURES.intersection(row.columns):
@@ -109,7 +102,7 @@ def score_applicant(
 
     explanation = artifacts["explainer"](row)
     shap_row = pd.Series(explanation.values[0], index=row.columns)
-    codes = reason_codes(shap_row, row.iloc[0], artifacts["train_medians"], top_n=3)
+    codes = reason_codes(shap_row, row.iloc[0], top_n=3)
 
     # This is an illustrative 12-month loss estimate, not a portfolio IFRS 9 calculation.
     ecl = pd_estimate * lgd * req.credit_amount

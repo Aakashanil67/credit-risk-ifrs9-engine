@@ -47,11 +47,20 @@ def discounted_scenario_ecl(
     if not 0 <= pd_annual <= 1 or ead < 0 or annual_eir < 0 or remaining_months < 1:
         raise ValueError("invalid ECL inputs")
 
+    if stage == 3:
+        # A credit-impaired account is already in default for this mechanics demonstration. Its
+        # loss is the first discounted cash shortfall, not another stream of annual PD draws.
+        return scenario.weight * scenario.lgd * ead / (1 + annual_eir) ** (1 / 12)
+
     horizon = min(12, remaining_months) if stage == 1 else remaining_months
     adjusted_pd = min(pd_annual * scenario.pd_multiplier, 1.0)
-    monthly_pd = 1 - (1 - adjusted_pd) ** (1 / 12)
-    discounted_loss = sum(
-        monthly_pd * scenario.lgd * ead / (1 + annual_eir) ** (month / 12)
-        for month in range(1, horizon + 1)
-    )
+    monthly_hazard = 1 - (1 - adjusted_pd) ** (1 / 12)
+    survival = 1.0
+    discounted_loss = 0.0
+    for month in range(1, horizon + 1):
+        marginal_default_probability = survival * monthly_hazard
+        discounted_loss += (
+            marginal_default_probability * scenario.lgd * ead / (1 + annual_eir) ** (month / 12)
+        )
+        survival *= 1 - monthly_hazard
     return scenario.weight * discounted_loss
