@@ -30,8 +30,54 @@ def test_stage_one_limits_the_discounted_loss_horizon_to_twelve_months():
         scenario=scenario,
     )
 
-    assert stage_one > 0
+    assert stage_one < 0.45 * 100_000
     assert stage_two > stage_one
+
+
+def test_survival_weighting_prevents_repeated_default_loss_over_a_long_horizon():
+    scenario = ECLScenario("Base", weight=1.0, pd_multiplier=1.0, lgd=1.0)
+
+    loss = discounted_scenario_ecl(
+        stage=2,
+        pd_annual=0.20,
+        ead=100_000,
+        annual_eir=0.0,
+        remaining_months=60,
+        scenario=scenario,
+    )
+
+    assert loss == pytest.approx((1 - (1 - 0.20) ** 5) * 100_000)
+    assert loss <= 100_000
+
+
+def test_stage_one_uses_the_annual_pd_once_when_discounting_is_zero():
+    scenario = ECLScenario("Base", weight=1.0, pd_multiplier=1.0, lgd=0.45)
+
+    loss = discounted_scenario_ecl(
+        stage=1,
+        pd_annual=0.20,
+        ead=100_000,
+        annual_eir=0.0,
+        remaining_months=60,
+        scenario=scenario,
+    )
+
+    assert loss == pytest.approx(0.20 * 0.45 * 100_000)
+
+
+def test_stage_three_recognises_the_credit_impaired_shortfall_immediately():
+    scenario = ECLScenario("Base", weight=1.0, pd_multiplier=1.0, lgd=0.45)
+
+    loss = discounted_scenario_ecl(
+        stage=3,
+        pd_annual=0.01,
+        ead=100_000,
+        annual_eir=0.0,
+        remaining_months=60,
+        scenario=scenario,
+    )
+
+    assert loss == pytest.approx(45_000)
 
 
 def test_scenario_weight_scales_the_expected_loss():
