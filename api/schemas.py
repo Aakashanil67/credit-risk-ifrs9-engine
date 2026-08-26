@@ -1,10 +1,4 @@
-"""Request/response schemas for POST /predict.
-
-The applicant form asks for the ~20 fields that actually drive the model (see
-reports/scorecard.md and reports/figures/shap_bar.png for which ones) rather than all 122 raw
-Home Credit columns — anything not asked for is treated as missing, which LightGBM handles
-natively since it was trained on genuinely incomplete data.
-"""
+"""Request/response schemas for the 18-field application-profile prediction contract."""
 
 from typing import Literal
 

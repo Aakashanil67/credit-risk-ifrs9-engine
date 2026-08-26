@@ -18,10 +18,10 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from api.schemas import ApplicantRequest  # noqa: E402
 from api.scoring import applicant_to_row, load_artifacts, score_applicant  # noqa: E402
-from src.config import DEFAULT_EAD_COL, DEFAULT_LGD  # noqa: E402
+from src.config import DEFAULT_EAD_COL  # noqa: E402
 
 API_URL = os.environ.get("API_URL", "http://localhost:8000")
-API_TIMEOUT_SECONDS = 3.0
+API_TIMEOUT_SECONDS = 10.0
 
 st.set_page_config(page_title="Credit Risk & IFRS 9 Engine", layout="wide")
 
@@ -40,9 +40,9 @@ def call_api(payload: dict) -> dict | None:
         return None
 
 
-def score_locally(req: ApplicantRequest, lgd: float) -> dict:
+def score_locally(req: ApplicantRequest) -> dict:
     artifacts = get_local_artifacts()
-    result = score_applicant(req, artifacts, lgd=lgd)
+    result = score_applicant(req, artifacts)
     return result.model_dump()
 
 
@@ -50,17 +50,9 @@ st.title("Credit Risk & IFRS 9 Engine")
 st.caption("Application-time PD scoring, illustrative decisions, and explanation codes.")
 
 with st.sidebar:
-    st.header("Provisioning assumptions")
-    lgd = st.slider(
-        "LGD — loss given default",
-        min_value=0.0,
-        max_value=1.0,
-        value=DEFAULT_LGD,
-        step=0.05,
-        help="Share of exposure not recovered after a default. Applied on top of whatever PD the model returns.",
-    )
+    st.header("Model contract")
     st.caption(
-        f"EAD is the applicant's requested credit amount (`{DEFAULT_EAD_COL}`) — set it in the form."
+        f"The loss example uses the requested credit amount (`{DEFAULT_EAD_COL}`) as EAD and a fixed 45% LGD."
     )
     st.divider()
     st.caption(f"API: `{API_URL}`")
@@ -143,16 +135,9 @@ if submitted:
     if api_result is not None:
         st.success(f"Scored via live API ({API_URL})")
         result = api_result
-        # the API always uses the configured DEFAULT_LGD — recompute ECL locally if the sidebar
-        # LGD differs, so the slider actually does something even when the API is reachable
-        if abs(lgd - result["lgd_assumption"]) > 1e-9:
-            result["expected_credit_loss"] = round(
-                result["probability_of_default"] * lgd * credit_amount, 2
-            )
-            result["lgd_assumption"] = lgd
     else:
         st.info("API unreachable — scoring directly against the saved model artifacts instead.")
-        result = score_locally(req, lgd)
+        result = score_locally(req)
 
     pd_estimate = result["probability_of_default"]
     decision = result["decision"]
@@ -183,10 +168,14 @@ if submitted:
             )
 
         st.metric(
-            "Expected credit loss (12-month, Stage 1)", f"R{result['expected_credit_loss']:,.2f}"
+            "Illustrative 12-month loss estimate", f"R{result['expected_credit_loss']:,.2f}"
         )
         st.caption(
             f"ECL = PD x LGD ({result['lgd_assumption']:.0%}) x credit amount (R{credit_amount:,.0f})"
+        )
+        st.metric("Illustrative expected value", f"R{result['expected_value']:,.2f}")
+        st.caption(
+            f"{result['model_name']} v{result['model_version']} · {result['model_profile']} profile"
         )
 
     with right:
