@@ -20,47 +20,11 @@ from src.data_loader import load_application_data
 from src.features import build_lgbm_features
 from src.model_profiles import ModelProfile
 from src.preprocessing import split_data
+from src.reason_codes import reason_codes
 
 SHAP_SAMPLE_SIZE = (
     3000  # full validation set (61k rows) isn't needed for a stable importance ranking
 )
-
-# Human-readable descriptions for the features that show up most often in the global ranking.
-# Anything not listed here falls back to the raw column name — this covers what actually mattered,
-# not a hand-authored translation of all 122 raw columns.
-FEATURE_DESCRIPTIONS = {
-    "NAME_CONTRACT_TYPE": "loan type (cash vs revolving)",
-    "EXT_SOURCE_1": "external credit bureau score (source 1)",
-    "EXT_SOURCE_2": "external credit bureau score (source 2)",
-    "EXT_SOURCE_3": "external credit bureau score (source 3)",
-    "AMT_CREDIT": "loan amount",
-    "AMT_INCOME_TOTAL": "reported income",
-    "AMT_ANNUITY": "monthly loan repayment (annuity)",
-    "AMT_GOODS_PRICE": "price of the goods being financed",
-    "DAYS_BIRTH": "applicant age",
-    "DAYS_EMPLOYED": "length of current employment",
-    "DAYS_REGISTRATION": "time since last registration change",
-    "DAYS_ID_PUBLISH": "time since ID document was issued",
-    "REGION_POPULATION_RELATIVE": "population density of home region",
-    "REGION_RATING_CLIENT": "region risk rating",
-    "REGION_RATING_CLIENT_W_CITY": "region risk rating (city-adjusted)",
-    "CODE_GENDER": "gender",
-    "NAME_EDUCATION_TYPE": "education level",
-    "NAME_INCOME_TYPE": "income type",
-    "NAME_FAMILY_STATUS": "family status",
-    "OCCUPATION_TYPE": "occupation",
-    "ORGANIZATION_TYPE": "employer type",
-    "CNT_CHILDREN": "number of children",
-    "CNT_FAM_MEMBERS": "family size",
-    "OWN_CAR_AGE": "age of owned car",
-    "FLAG_OWN_CAR": "car ownership",
-    "FLAG_OWN_REALTY": "property ownership",
-}
-
-
-def humanize_feature(name: str) -> str:
-    return FEATURE_DESCRIPTIONS.get(name, name.replace("_", " ").lower())
-
 
 def load_or_train_model():
     if not LGBM_MODEL_PATH.exists():
@@ -82,36 +46,6 @@ def save_current_shap_plot(out_path) -> None:
     fig.tight_layout()
     fig.savefig(out_path, dpi=120, bbox_inches="tight")
     plt.close(fig)
-
-
-def reason_codes(
-    shap_row: pd.Series, feature_row: pd.Series, train_medians: pd.Series, top_n: int = 3
-) -> list[str]:
-    """Turn the top-`top_n` SHAP drivers for one applicant into plain-English sentences."""
-    top_features = shap_row.abs().sort_values(ascending=False).head(top_n).index
-
-    sentences = []
-    for feat in top_features:
-        shap_val = shap_row[feat]
-        value = feature_row[feat]
-        desc = humanize_feature(feat)
-
-        if pd.isna(value):
-            # e.g. a bureau score the applicant's file doesn't have yet — "low" would be a lie
-            clause = f"missing {desc}"
-        elif (
-            isinstance(value, int | float | np.integer | np.floating)
-            and feat in train_medians.index
-        ):
-            qualifier = "high" if value > train_medians[feat] else "low"
-            clause = f"{qualifier} {desc}"
-        else:
-            clause = f"{desc} of {value}"
-
-        verb = "raises" if shap_val > 0 else "lowers"
-        sentences.append(f"{clause[0].upper()}{clause[1:]} {verb} the estimated default risk.")
-
-    return sentences
 
 
 def calibration_summary(y_true: pd.Series, y_pred: np.ndarray, n_bins: int = 10) -> dict:

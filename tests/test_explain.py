@@ -2,7 +2,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from src.explain import humanize_feature, reason_codes
+from src.reason_codes import humanize_feature, reason_codes
 
 
 @pytest.fixture
