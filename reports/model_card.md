@@ -1,94 +1,79 @@
-# Model card — credit-risk-ifrs9-engine
+# Model card: application-profile PD model
 
 ## Intended use
 
-A probability-of-default (PD) model for unsecured consumer lending decisions, wrapped with a
-WoE/IV scorecard, SHAP-based reason codes, and an IFRS 9 expected-credit-loss layer. Framed
-throughout as if deployed at a South African lender, so the SICR staging, reason codes and
-model-risk documentation follow SARB expectations for credit-scoring models; the underlying data
-itself is not South African (see Limitations).
+This is an educational probability-of-default model for an unsecured consumer-loan application.
+It is exposed through a FastAPI endpoint and a Streamlit demonstration so that the model contract,
+decision rule and explanation path can be inspected together. It is not approved for credit
+decisions, product prices, collections, accounting provisions or automated adverse action.
 
-Not intended for: origination decisions made without a human in the loop, any lending secured
-against property, or use outside the unsecured-consumer-credit context it was trained on.
+## Data and split
 
-## Data
+The model uses Kaggle's Home Credit Default Risk `application_train.csv`: 307,511 historical loan
+applications, 122 raw columns and an 8.1% default rate. `TARGET=1` records a late-payment outcome
+defined by the competition data. The dataset is not South African.
+That matters.
 
-Kaggle's Home Credit Default Risk competition, `application_train.csv`: 307,511 loan applications,
-122 raw columns, one row per application. `TARGET` = 1 if the applicant had a payment more than a
-threshold number of days late at some point (Home Credit's definition of default), 8.1% of the
-sample. Split 60/20/20 (train/validation/test), stratified on `TARGET`, seed 42; the imputer and
-every fitted transform are fit on the training fold only (see `src/preprocessing.py`).
+The data was split 60/20/20 with stratification and seed 42. All model selection happens on the
+184,506-row training fold and the 61,502-row validation fold. The 61,503-row test fold is reserved
+for the final estimate. The application bundle records its dataset hash, package versions, category
+levels, feature names and test metrics in `models/application/metadata.json`.
+
+## Inputs and output
+
+The model receives 18 application-time fields. They include requested credit, annuity, declared
+income, employment tenure, selected household fields, education, income type, family status,
+occupation, employer type, regional population density and car age. Gender and external
+credit-bureau fields are deliberately absent from the served contract.
+
+The output is a PD estimate, three SHAP-based reason codes, an illustrative expected-value decision
+and a simple 12-month loss estimate. A response is not a credit decision about a real person. The
+reason codes explain model contributions; they do not establish causation.
 
 ## Performance
 
-Validation set (61,502 applications), against the logistic regression baseline:
+LightGBM used a five-fold training-fold sweep over three small parameter combinations. The selected
+settings were `learning_rate=0.05` and `num_leaves=31`; early stopping selected 166 trees on the
+validation fold. Performance on the untouched test fold was:
 
-| metric | logistic baseline | LightGBM (this model) |
-|---|---|---|
-| AUC | 0.7326 | 0.7565 |
-| Gini | 0.4652 | 0.5129 |
-| KS | 0.3466 | 0.3794 |
-| Brier score | — | 0.0678 |
+| metric | result |
+|---|---:|
+| AUC | 0.678678 |
+| Gini | 0.357355 |
+| KS | 0.259713 |
+| Brier score | 0.071635 |
 
-LightGBM beats the baseline on every ranking metric. Brier score of 0.0678 sits below the
-0.0743 a model would score by always predicting the base default rate (8.1%). The calibration
-curve (`reports/figures/calibration_curve.png`) tracks the diagonal closely across the observed
-PD range (0-30%), so predicted PDs can be read as real probabilities, which matters here
-specifically because `ECL = PD x LGD x EAD` uses the raw PD value, not its rank.
+These numbers describe ranking and probability error on this one historical dataset. They are not
+a promise of performance elsewhere. `reports/model_comparison.md` also shows a logistic benchmark
+with a different, bureau-rich input set. Its stronger reported result should not be treated as a
+head-to-head win or loss against this deployment profile.
 
-The WoE scorecard's information value ranks external credit-bureau scores highest
-(`EXT_SOURCE_3` IV 0.329, `EXT_SOURCE_2` IV 0.322, both "strong" by the conventional 0.3-0.5
-band), consistent with SHAP's global importance ranking the same two features top of the
-LightGBM model. See `reports/scorecard.md` and `reports/eda_summary.md`.
+One test fold is not stability evidence.
 
-## Fairness considerations
+Because the test set comes from the same competition dataset and period as the training data, it
+cannot show whether a changed applicant mix, product terms, data-capture process, macroeconomy or
+recovery practice would alter calibration or approval rates; that needs out-of-time local monitoring.
 
-Checked one thing directly rather than asserting the model is fair in general: predicted PD and
-approval rate by `CODE_GENDER`, on the validation set, at an illustrative 8% PD approval cutoff.
+## Decision and ECL assumptions
 
-| gender | n | mean predicted PD | actual default rate | approval rate at 8% cutoff |
-|---|---|---|---|---|
-| F | 40,677 | 7.12% | 7.02% | 72.6% |
-| M | 20,823 | 9.95% | 10.13% | 56.9% |
+The public API approves an application below a PD threshold of 0.140351. The figure follows from
+the project assumptions: 12% performing margin, 2% operating cost, 2% capital cost and 45% LGD.
+Changing product pricing, capital treatment or LGD changes the cutoff. It is a teaching rule, not a
+policy threshold.
 
-The model is well-calibrated *within* each group (predicted PD tracks actual default rate closely
-for both), so this isn't a calibration bug: it's the model faithfully reproducing a real gap in
-observed default rates by gender in this training population. That's exactly the pattern that
-draws regulatory attention regardless of intent: a 15.7-point approval-rate gap by gender is the
-kind of thing a South African National Credit Act compliance review, or an SARB model-risk
-assessor, would flag for further work before this went anywhere near a live decision.
+The API's displayed loss estimate is `PD x 45% x requested credit`. The separate ECL demonstration
+adds 12-month versus lifetime horizons, discounted cash flows and weighted macroeconomic scenarios.
+Neither layer has observed recovery data, amortisation schedules or an account-level PD history, so
+neither can be used for accounting provision.
 
-`CODE_GENDER` is used directly as a scorecard and LightGBM feature. What this card does *not*
-claim: that removing it fixes the disparity (proxy features like income, occupation and region
-could reconstruct most of the same signal), or that a full disparate-impact test across other
-protected characteristics has been run. It hasn't. Flagging this as the most important open item
-before any production use, not glossing over it.
+## Fairness and monitoring
 
-## Limitations
+Gender is available only to the offline fairness audit. On the test fold, approval was 91.81% for
+the F group and 84.02% for the M group under the illustrative threshold. Removing gender from the
+model does not prove that proxy effects have disappeared. `reports/fairness_audit.md` reports the
+group sizes, default rates, calibration error, true-positive rate and false-positive rate behind
+that statement.
 
-- **Not South African data.** Home Credit operates in several countries but this Kaggle release
-  isn't SA-specific; the SARB/NCA framing throughout this repo is a deliberate exercise in
-  "how would this be documented for a SA lender," not a claim about the underlying population.
-  A real deployment needs local data and local outcome definitions.
-- **IFRS 9 SICR staging is a proxy, not a real time series.** `src/ecl.py` compares the LightGBM
-  model's PD against the logistic baseline's PD for the same applicant as a stand-in for
-  "PD at origination," because this dataset is a single snapshot with no repeat observations of
-  the same loan. See `reports/ifrs9_summary.md` for the full caveat.
-- **Static training data.** Sampled at a point in time; no drift monitoring, no champion/challenger
-  process, no scheduled retraining defined. A live model needs all three.
-- **Gender used as a direct model input**, flagged above under Fairness considerations. It's the
-  single item most likely to block a real compliance sign-off as-is.
-- **LGD and EAD are simplifying assumptions**, not measured recovery data: LGD is a flat 45%
-  configurable constant, EAD is the original credit amount rather than an amortised outstanding
-  balance. Both are clearly labelled as assumptions in `reports/ifrs9_summary.md`, not fitted from
-  observed recoveries (this dataset doesn't contain any).
-
-## SARB model-risk framing
-
-Under SARB's model-risk expectations (aligned with the Basel Committee's SR 11-7-style guidance
-most SA banks already follow), a model like this would sit through: independent validation of the
-LightGBM model against the logistic challenger (done here, informally, as the baseline
-comparison), documented limitations and assumptions (this card), ongoing performance monitoring
-against a stability threshold (not implemented; no live scoring feed exists yet), and periodic
-model risk committee review before any staging or threshold change. Treat this repo as the
-validation-and-documentation layer of that process, not a substitute for the governance around it.
+A real deployment would require local outcomes, governance review, independent validation,
+adverse-action controls, stability monitoring, outcome feedback and a retraining-governance process.
+Those controls are outside this repository.
