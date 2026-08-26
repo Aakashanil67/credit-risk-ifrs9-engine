@@ -42,6 +42,10 @@ def test_health_reports_model_loaded(client: TestClient) -> None:
     assert response.json() == {"status": "ok", "model_loaded": True}
 
 
+def test_openapi_version_tracks_the_application_release(client: TestClient) -> None:
+    assert client.get("/openapi.json").json()["info"]["version"] == "1.1.0"
+
+
 def test_predict_returns_all_expected_fields(client: TestClient) -> None:
     response = client.post("/predict", json=VALID_APPLICANT)
     assert response.status_code == 200
