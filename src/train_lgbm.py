@@ -92,8 +92,7 @@ def training_metadata(
         "split_rows": {"train": train_rows, "validation": validation_rows, "test": test_rows},
         "test_metrics": test_metrics,
         "package_versions": {
-            package: version(package)
-            for package in ("lightgbm", "numpy", "pandas", "scikit-learn")
+            package: version(package) for package in ("lightgbm", "numpy", "pandas", "scikit-learn")
         },
     }
 

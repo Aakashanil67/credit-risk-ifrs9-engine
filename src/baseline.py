@@ -69,7 +69,9 @@ def fit_logit(train_X: pd.DataFrame, train_y: pd.Series) -> sm.Logit:
     return model
 
 
-def score_predictions(y_true: pd.Series | np.ndarray, pd_score: pd.Series | np.ndarray) -> dict[str, float]:
+def score_predictions(
+    y_true: pd.Series | np.ndarray, pd_score: pd.Series | np.ndarray
+) -> dict[str, float]:
     metrics = binary_metrics(np.asarray(y_true), np.asarray(pd_score))
     return {
         "AUC": metrics.auc,

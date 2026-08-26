@@ -1,4 +1,3 @@
-
 import pytest
 
 from src.ecl_core import ECLScenario, assign_stage, discounted_scenario_ecl
@@ -15,10 +14,20 @@ def test_stage_assignment_uses_credit_impairment_dpd_and_significant_pd_increase
 def test_stage_one_limits_the_discounted_loss_horizon_to_twelve_months():
     scenario = ECLScenario("Base", weight=1.0, pd_multiplier=1.0, lgd=0.45)
     stage_one = discounted_scenario_ecl(
-        stage=1, pd_annual=0.12, ead=100_000, annual_eir=0.15, remaining_months=60, scenario=scenario
+        stage=1,
+        pd_annual=0.12,
+        ead=100_000,
+        annual_eir=0.15,
+        remaining_months=60,
+        scenario=scenario,
     )
     stage_two = discounted_scenario_ecl(
-        stage=2, pd_annual=0.12, ead=100_000, annual_eir=0.15, remaining_months=60, scenario=scenario
+        stage=2,
+        pd_annual=0.12,
+        ead=100_000,
+        annual_eir=0.15,
+        remaining_months=60,
+        scenario=scenario,
     )
 
     assert stage_one > 0

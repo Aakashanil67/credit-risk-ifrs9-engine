@@ -174,7 +174,9 @@ def test_predict_accepts_missing_optional_bureau_and_car_fields(client: TestClie
     assert body["expected_credit_loss"] >= 0.0
 
 
-def test_reason_codes_do_not_reference_bureau_fields_absent_from_the_application_model(client: TestClient) -> None:
+def test_reason_codes_do_not_reference_bureau_fields_absent_from_the_application_model(
+    client: TestClient,
+) -> None:
     """The served model excludes bureau-only fields, so its reasons must not imply a missing score."""
     response = client.post("/predict", json=VALID_APPLICANT)
     assert response.status_code == 200
