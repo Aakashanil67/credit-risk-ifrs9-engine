@@ -18,7 +18,7 @@ mlartifacts/
 # ...except the small (<1MB) trained artifacts Render/Streamlit Cloud need at deploy time — these
 # are learned model parameters, not the Kaggle dataset itself, so committing them doesn't run into
 # Kaggle's data-redistribution restriction the way committing data/ would.
-!models/*.joblib
+!models/**/*.joblib
 
 # Python
 __pycache__/
@@ -40,4 +40,4 @@ Thumbs.db
 # personal planning docs, not part of the shipped project
 *.pdf
 Project 1 - AUTOPILOT - Credit Risk & IFRS 9 Engine.md
-
+.worktrees/

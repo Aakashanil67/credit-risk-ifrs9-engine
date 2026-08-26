@@ -2,7 +2,8 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from src.explain import humanize_feature, reason_codes
+from src.explain import shap_raw_scores
+from src.reason_codes import humanize_feature, reason_codes
 
 
 @pytest.fixture
@@ -70,3 +71,14 @@ def test_reason_codes_flags_missing_value_instead_of_calling_it_low(
 def test_humanize_feature_uses_dictionary_then_falls_back() -> None:
     assert humanize_feature("EXT_SOURCE_2") == "external credit bureau score (source 2)"
     assert humanize_feature("SOME_RANDOM_COLUMN") == "some random column"
+
+
+def test_shap_raw_scores_add_base_value_to_all_feature_contributions() -> None:
+    """Tree SHAP explains LightGBM's raw margin, not its post-sigmoid PD."""
+
+    base_values = np.array([-2.0, -2.0])
+    values = np.array([[0.2, -0.1], [0.5, 0.4]])
+
+    scores = shap_raw_scores(base_values, values)
+
+    np.testing.assert_allclose(scores, [-1.9, -1.1])

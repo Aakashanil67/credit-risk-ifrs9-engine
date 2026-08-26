@@ -18,10 +18,10 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from api.schemas import ApplicantRequest  # noqa: E402
 from api.scoring import applicant_to_row, load_artifacts, score_applicant  # noqa: E402
-from src.config import DEFAULT_EAD_COL, DEFAULT_LGD  # noqa: E402
+from src.config import DEFAULT_EAD_COL  # noqa: E402
 
 API_URL = os.environ.get("API_URL", "http://localhost:8000")
-API_TIMEOUT_SECONDS = 3.0
+API_TIMEOUT_SECONDS = 10.0
 
 st.set_page_config(page_title="Credit Risk & IFRS 9 Engine", layout="wide")
 
@@ -36,33 +36,23 @@ def call_api(payload: dict) -> dict | None:
         response = httpx.post(f"{API_URL}/predict", json=payload, timeout=API_TIMEOUT_SECONDS)
         response.raise_for_status()
         return response.json()
-    except (httpx.ConnectError, httpx.TimeoutException, httpx.HTTPStatusError):
+    except (httpx.ConnectError, httpx.TimeoutException):
         return None
 
 
-def score_locally(req: ApplicantRequest, lgd: float) -> dict:
+def score_locally(req: ApplicantRequest) -> dict:
     artifacts = get_local_artifacts()
-    result = score_applicant(req, artifacts, lgd=lgd)
+    result = score_applicant(req, artifacts)
     return result.model_dump()
 
 
 st.title("Credit Risk & IFRS 9 Engine")
-st.caption(
-    "Score a loan applicant: probability of default, decision, SHAP reason codes, IFRS 9 ECL."
-)
+st.caption("Application-time PD scoring, illustrative decisions, and explanation codes.")
 
 with st.sidebar:
-    st.header("Provisioning assumptions")
-    lgd = st.slider(
-        "LGD — loss given default",
-        min_value=0.0,
-        max_value=1.0,
-        value=DEFAULT_LGD,
-        step=0.05,
-        help="Share of exposure not recovered after a default. Applied on top of whatever PD the model returns.",
-    )
+    st.header("Model contract")
     st.caption(
-        f"EAD is the applicant's requested credit amount (`{DEFAULT_EAD_COL}`) — set it in the form."
+        f"The loss example uses the requested credit amount (`{DEFAULT_EAD_COL}`) as EAD and a fixed 45% LGD."
     )
     st.divider()
     st.caption(f"API: `{API_URL}`")
@@ -73,7 +63,6 @@ with st.form("applicant_form"):
     with col1:
         st.subheader("Applicant")
         age_years = st.number_input("Age (years)", min_value=18, max_value=100, value=35)
-        gender = st.selectbox("Gender", ["F", "M"])
         num_children = st.number_input("Number of children", min_value=0, max_value=20, value=0)
         family_members = st.number_input("Family members", min_value=1, max_value=20, value=1)
         family_status = st.selectbox(
@@ -128,7 +117,6 @@ if submitted:
         income_total=income_total,
         credit_amount=credit_amount,
         annuity=annuity,
-        gender=gender,
         owns_car=owns_car,
         owns_realty=owns_realty,
         num_children=num_children,
@@ -139,20 +127,17 @@ if submitted:
         occupation=occupation or None,
     )
 
-    api_result = call_api(req.model_dump())
+    try:
+        api_result = call_api(req.model_dump())
+    except httpx.HTTPStatusError as exc:
+        st.error(f"The API rejected this request: {exc.response.text}")
+        st.stop()
     if api_result is not None:
         st.success(f"Scored via live API ({API_URL})")
         result = api_result
-        # the API always uses the configured DEFAULT_LGD — recompute ECL locally if the sidebar
-        # LGD differs, so the slider actually does something even when the API is reachable
-        if abs(lgd - result["lgd_assumption"]) > 1e-9:
-            result["expected_credit_loss"] = round(
-                result["probability_of_default"] * lgd * credit_amount, 2
-            )
-            result["lgd_assumption"] = lgd
     else:
         st.info("API unreachable — scoring directly against the saved model artifacts instead.")
-        result = score_locally(req, lgd)
+        result = score_locally(req)
 
     pd_estimate = result["probability_of_default"]
     decision = result["decision"]
@@ -182,11 +167,13 @@ if submitted:
                 f"**DECLINE** — PD {pd_estimate:.1%} is at or above the {result['decision_threshold']:.0%} cutoff"
             )
 
-        st.metric(
-            "Expected credit loss (12-month, Stage 1)", f"R{result['expected_credit_loss']:,.2f}"
-        )
+        st.metric("Illustrative 12-month loss estimate", f"R{result['expected_credit_loss']:,.2f}")
         st.caption(
             f"ECL = PD x LGD ({result['lgd_assumption']:.0%}) x credit amount (R{credit_amount:,.0f})"
+        )
+        st.metric("Illustrative expected value", f"R{result['expected_value']:,.2f}")
+        st.caption(
+            f"{result['model_name']} v{result['model_version']} · {result['model_profile']} profile"
         )
 
     with right:
