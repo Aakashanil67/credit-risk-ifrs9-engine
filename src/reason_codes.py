@@ -36,6 +36,19 @@ def humanize_feature(name: str) -> str:
     return FEATURE_DESCRIPTIONS.get(name, name.replace("_", " ").lower())
 
 
+def _numeric_clause(feature: str, value: float, description: str) -> str:
+    """Format model-scale numeric inputs in units a dashboard visitor can interpret."""
+    if feature == "DAYS_BIRTH":
+        return f"applicant age ({-value / 365.25:.0f} years)"
+    if feature == "DAYS_EMPLOYED":
+        return f"length of current employment ({-value / 365.25:.0f} years)"
+    if feature.startswith("AMT_"):
+        return f"{description} ({value:,.0f} monetary units)"
+    if feature in {"CNT_CHILDREN", "CNT_FAM_MEMBERS"}:
+        return f"{description} ({value:.0f})"
+    return f"{description} ({value:.3g})"
+
+
 def reason_codes(
     shap_row: pd.Series, feature_row: pd.Series, train_medians: pd.Series, top_n: int = 3
 ) -> list[str]:
@@ -50,12 +63,8 @@ def reason_codes(
 
         if pd.isna(value):
             clause = f"missing {description}"
-        elif (
-            isinstance(value, int | float | np.integer | np.floating)
-            and feature in train_medians.index
-        ):
-            qualifier = "high" if value > train_medians[feature] else "low"
-            clause = f"{qualifier} {description}"
+        elif isinstance(value, int | float | np.integer | np.floating):
+            clause = _numeric_clause(feature, float(value), description)
         else:
             clause = f"{description} of {value}"
 
