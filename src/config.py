@@ -19,6 +19,7 @@ def model_bundle_dir(profile: str) -> Path:
     """Directory for a profile-specific fitted model and its serving contract."""
     return MODELS_DIR / profile
 
+
 # Illustrative per-loan economics for the portfolio demonstration. They are not calibrated to a
 # lender's product-pricing data; src.decision_policy derives the approval threshold from them.
 PERFORMING_MARGIN_RATE = 0.12

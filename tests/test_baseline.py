@@ -45,4 +45,3 @@ def test_baseline_metrics_accept_the_numpy_predictions_returned_by_statsmodels()
     metrics = score_predictions(np.array([0, 0, 1, 1]), np.array([0.1, 0.2, 0.8, 0.9]))
 
     assert metrics["KS"] == pytest.approx(1.0)
-

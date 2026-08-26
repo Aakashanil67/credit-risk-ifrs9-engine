@@ -167,9 +167,7 @@ if submitted:
                 f"**DECLINE** — PD {pd_estimate:.1%} is at or above the {result['decision_threshold']:.0%} cutoff"
             )
 
-        st.metric(
-            "Illustrative 12-month loss estimate", f"R{result['expected_credit_loss']:,.2f}"
-        )
+        st.metric("Illustrative 12-month loss estimate", f"R{result['expected_credit_loss']:,.2f}")
         st.caption(
             f"ECL = PD x LGD ({result['lgd_assumption']:.0%}) x credit amount (R{credit_amount:,.0f})"
         )

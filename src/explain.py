@@ -29,6 +29,7 @@ SHAP_SAMPLE_SIZE = (
     3000  # full validation set (61k rows) isn't needed for a stable importance ranking
 )
 
+
 def load_or_train_model():
     """Load the legacy full-information model used by the historical portfolio ECL script."""
     if not LGBM_MODEL_PATH.exists():
