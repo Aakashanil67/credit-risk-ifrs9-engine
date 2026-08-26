@@ -31,7 +31,6 @@ CATEGORY_FIELD_NAMES = {
     "NAME_INCOME_TYPE": "income_type",
     "NAME_FAMILY_STATUS": "family_status",
     "OCCUPATION_TYPE": "occupation",
-    "ORGANIZATION_TYPE": "organization_type",
 }
 
 NUMERIC_FEATURES = {
@@ -43,13 +42,11 @@ NUMERIC_FEATURES = {
     "AMT_GOODS_PRICE",
     "CNT_CHILDREN",
     "CNT_FAM_MEMBERS",
-    "REGION_POPULATION_RELATIVE",
-    "OWN_CAR_AGE",
 }
 
 
 def load_artifacts() -> dict:
-    bundle = load_artifact_bundle(model_bundle_dir("application"))
+    bundle = load_artifact_bundle(model_bundle_dir("public_demo"))
     return {
         "model": bundle.model,
         "train_medians": bundle.train_medians,
@@ -79,9 +76,6 @@ def applicant_to_row(
         "NAME_INCOME_TYPE": req.income_type,
         "NAME_FAMILY_STATUS": req.family_status,
         "OCCUPATION_TYPE": req.occupation,
-        "ORGANIZATION_TYPE": req.organization_type,
-        "REGION_POPULATION_RELATIVE": req.region_population_relative,
-        "OWN_CAR_AGE": req.own_car_age,
     }
     row = pd.DataFrame([raw]).reindex(columns=feature_names)
     for column in NUMERIC_FEATURES.intersection(row.columns):

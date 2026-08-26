@@ -11,6 +11,7 @@ from pathlib import Path
 
 import httpx
 import matplotlib.pyplot as plt
+import pandas as pd
 import shap
 import streamlit as st
 
@@ -46,13 +47,23 @@ def score_locally(req: ApplicantRequest) -> dict:
     return result.model_dump()
 
 
+def category_options(column: str, fallback: list[str]) -> list[str]:
+    """Use fitted categories so the public form cannot send an unsupported label."""
+    try:
+        categories = get_local_artifacts()["cat_dtypes"][column].categories.tolist()
+    except (FileNotFoundError, KeyError):
+        return fallback
+    return [str(category) for category in categories if pd.notna(category)]
+
+
 st.title("Credit Risk & IFRS 9 Engine")
-st.caption("Application-time PD scoring, illustrative decisions, and explanation codes.")
+st.caption("Public-demo PD scoring, illustrative decisions, and explanation codes.")
 
 with st.sidebar:
     st.header("Model contract")
     st.caption(
-        f"The loss example uses the requested credit amount (`{DEFAULT_EAD_COL}`) as EAD and a fixed 45% LGD."
+        f"The loss example uses the requested credit amount (`{DEFAULT_EAD_COL}`) as EAD and a fixed 45% LGD. "
+        "Amounts are dataset monetary units; the source dataset does not identify a currency."
     )
     st.divider()
     st.caption(f"API: `{API_URL}`")
@@ -67,7 +78,10 @@ with st.form("applicant_form"):
         family_members = st.number_input("Family members", min_value=1, max_value=20, value=1)
         family_status = st.selectbox(
             "Family status",
-            ["Married", "Single / not married", "Civil marriage", "Widow", "Separated"],
+            category_options(
+                "NAME_FAMILY_STATUS",
+                ["Married", "Single / not married", "Civil marriage", "Widow", "Separated"],
+            ),
         )
 
     with col2:
@@ -80,30 +94,49 @@ with st.form("applicant_form"):
         )
         income_type = st.selectbox(
             "Income type",
-            ["Working", "Commercial associate", "Pensioner", "State servant", "Student"],
+            category_options(
+                "NAME_INCOME_TYPE",
+                ["Working", "Commercial associate", "Pensioner", "State servant", "Student"],
+            ),
         )
         income_total = st.number_input(
-            "Annual income (R)", min_value=1.0, value=180_000.0, step=10_000.0
+            "Annual income (dataset monetary units)", min_value=1.0, value=180_000.0, step=10_000.0
         )
         education = st.selectbox(
             "Education",
-            [
-                "Secondary / secondary special",
-                "Higher education",
-                "Incomplete higher",
-                "Lower secondary",
-                "Academic degree",
-            ],
+            category_options(
+                "NAME_EDUCATION_TYPE",
+                [
+                    "Secondary / secondary special",
+                    "Higher education",
+                    "Incomplete higher",
+                    "Lower secondary",
+                    "Academic degree",
+                ],
+            ),
         )
-        occupation = st.text_input("Occupation (optional)", value="")
+        occupation = st.selectbox(
+            "Occupation",
+            ["Not provided", *category_options("OCCUPATION_TYPE", ["Laborers", "Sales staff", "Managers"])],
+        )
 
     with col3:
         st.subheader("Loan")
-        contract_type = st.selectbox("Loan type", ["Cash loans", "Revolving loans"])
-        credit_amount = st.number_input(
-            "Credit amount (R)", min_value=1.0, value=450_000.0, step=10_000.0
+        contract_type = st.selectbox(
+            "Loan type", category_options("NAME_CONTRACT_TYPE", ["Cash loans", "Revolving loans"])
         )
-        annuity = st.number_input("Monthly annuity (R)", min_value=1.0, value=22_500.0, step=500.0)
+        credit_amount = st.number_input(
+            "Credit amount (dataset monetary units)", min_value=1.0, value=450_000.0, step=10_000.0
+        )
+        goods_price = st.number_input(
+            "Goods price, if applicable (dataset monetary units)",
+            min_value=1.0,
+            value=450_000.0,
+            step=10_000.0,
+        )
+        annuity = st.number_input(
+            "Monthly annuity (dataset monetary units)", min_value=1.0, value=22_500.0, step=500.0
+        )
         owns_car = st.checkbox("Owns a car")
         owns_realty = st.checkbox("Owns property")
 
@@ -117,6 +150,7 @@ if submitted:
         income_total=income_total,
         credit_amount=credit_amount,
         annuity=annuity,
+        goods_price=goods_price,
         owns_car=owns_car,
         owns_realty=owns_realty,
         num_children=num_children,
@@ -124,7 +158,7 @@ if submitted:
         education=education,
         income_type=income_type,
         family_status=family_status,
-        occupation=occupation or None,
+        occupation=None if occupation == "Not provided" else occupation,
     )
 
     try:
@@ -167,11 +201,14 @@ if submitted:
                 f"**DECLINE** — PD {pd_estimate:.1%} is at or above the {result['decision_threshold']:.0%} cutoff"
             )
 
-        st.metric("Illustrative 12-month loss estimate", f"R{result['expected_credit_loss']:,.2f}")
-        st.caption(
-            f"ECL = PD x LGD ({result['lgd_assumption']:.0%}) x credit amount (R{credit_amount:,.0f})"
+        st.metric(
+            "Illustrative 12-month loss estimate",
+            f"{result['expected_credit_loss']:,.2f} monetary units",
         )
-        st.metric("Illustrative expected value", f"R{result['expected_value']:,.2f}")
+        st.caption(
+            f"ECL = PD x LGD ({result['lgd_assumption']:.0%}) x credit amount ({credit_amount:,.0f} monetary units)"
+        )
+        st.metric("Illustrative expected value", f"{result['expected_value']:,.2f} monetary units")
         st.caption(
             f"{result['model_name']} v{result['model_version']} · {result['model_profile']} profile"
         )
