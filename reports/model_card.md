@@ -20,6 +20,11 @@ income type, family status, and occupation. It excludes gender, external credit-
 organisation type, regional density, and car age. The dashboard exposes every required field and
 its categorical choices are constrained to the fitted category levels.
 
+The endpoint rejects values outside its public contract before scoring. Income is limited to
+5,000,000, credit and goods price to 4,050,000, and annuity to 300,000 dataset monetary units;
+these limits prevent source-data outliers and malformed requests from producing misleading reason
+codes. It also allows at most 20 predictions per IP address per minute on the single-instance demo.
+
 Data is split 60/20/20 with stratification and seed 42. Five-fold cross-validation on the training
 fold selects hyperparameters. Early stopping on validation chooses the tree count. The selected
 model is refit on the combined train and validation folds, and the test fold is used once for the
@@ -52,6 +57,10 @@ Each response includes the three largest local SHAP contributions. They describe
 features moved a score relative to the model baseline; they are not causal findings or legally
 sufficient adverse-action reasons. Raw day-count features are translated into years and amounts
 into dataset monetary units before being shown.
+
+Global SHAP plots and the calibration curve use a 3,000-row sample and the full untouched test
+fold respectively. The final model is trained on train plus validation data, so using validation
+rows for those published artefacts would have made them in-sample diagnostics.
 
 The dashboard displays an illustrative 12-month loss estimate: `PD × 45% LGD × requested credit`.
 It is not an IFRS 9 provision. The separate ECL report adds stage assignment, survival-weighted

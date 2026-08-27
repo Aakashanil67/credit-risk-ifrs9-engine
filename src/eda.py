@@ -25,7 +25,7 @@ def plot_target_imbalance(df: pd.DataFrame, out_path) -> None:
     fig, ax = plt.subplots(figsize=(5, 4))
     ax.bar(balance.index, balance.values, color=["#2a6f97", "#c1121f"])
     ax.set_ylabel("share of applicants")
-    ax.set_title(f"Target imbalance ({balance['defaulted (1)']:.1%} defaulted)")
+    ax.set_title(f"Target imbalance ({balance['payment difficulty (1)']:.1%} payment difficulty)")
     for i, v in enumerate(balance.values):
         ax.text(i, v + 0.01, f"{v:.1%}", ha="center")
     fig.tight_layout()
@@ -78,9 +78,11 @@ def write_eda_summary(df: pd.DataFrame, missing: pd.DataFrame, corr: pd.Series, 
         "",
         "## Why accuracy is the wrong metric",
         "",
-        f"{balance['defaulted (1)']:.1%} of applicants defaulted. A model that predicts "
+        f"{balance['payment difficulty (1)']:.1%} of applicants had a recorded payment difficulty event. "
+        "The competition does not disclose the exact delinquency threshold, so this project does not "
+        "treat the target as a legally defined default. A model that predicts "
         f"'repaid' for every single applicant hits {balance['repaid (0)']:.1%} accuracy while "
-        "identifying zero of the defaults a lender actually cares about. AUC, precision-recall, "
+        "identifying none of those events. AUC, precision-recall, "
         "and the KS statistic (computed later against LightGBM) all separate the classes; "
         "accuracy collapses them.",
         "",

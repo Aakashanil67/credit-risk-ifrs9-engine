@@ -2,7 +2,7 @@
 
 ## Why accuracy is the wrong metric
 
-8.1% of applicants defaulted. A model that predicts 'repaid' for every single applicant hits 91.9% accuracy while identifying zero of the defaults a lender actually cares about. AUC, precision-recall, and the KS statistic (computed later against LightGBM) all separate the classes; accuracy collapses them.
+8.1% of applicants had a recorded payment difficulty event. The competition does not disclose the exact delinquency threshold, so this project does not treat the target as a legally defined default. A model that predicts 'repaid' for every single applicant hits 91.9% accuracy while identifying none of those events. AUC, precision-recall, and the KS statistic (computed later against LightGBM) all separate the classes; accuracy collapses them.
 
 ## Five findings
 

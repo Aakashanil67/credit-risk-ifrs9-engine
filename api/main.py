@@ -1,8 +1,7 @@
 """FastAPI credit-decision service: POST /predict scores one applicant end to end.
 
-Model artifacts (the trained LightGBM model, its category encodings, and training-set medians
-for reason-code phrasing) are loaded once at startup, not per request — retraining or reloading
-happens by restarting the service, not on the request path.
+Model artifacts (the trained LightGBM model, category encodings, and release metadata) are loaded
+once at startup, not per request. A new model takes effect when the service restarts.
 """
 
 from contextlib import asynccontextmanager
@@ -11,10 +10,12 @@ from fastapi import FastAPI, HTTPException, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 
+from api.rate_limit import PredictionRateLimiter
 from api.schemas import ApplicantRequest, PredictResponse
 from api.scoring import InvalidApplicantError, load_artifacts, score_applicant
 
 state: dict = {}
+prediction_rate_limiter = PredictionRateLimiter()
 
 
 @asynccontextmanager
@@ -33,6 +34,18 @@ app = FastAPI(
     version="1.2.0",
     lifespan=lifespan,
 )
+
+
+@app.middleware("http")
+async def limit_prediction_requests(request: Request, call_next):
+    if request.url.path == "/predict":
+        client_id = request.client.host if request.client else "unknown"
+        if not prediction_rate_limiter.allow(client_id):
+            return JSONResponse(
+                status_code=429,
+                content={"detail": "prediction limit reached; try again in one minute"},
+            )
+    return await call_next(request)
 
 
 @app.exception_handler(RequestValidationError)

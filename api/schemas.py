@@ -11,13 +11,22 @@ class ApplicantRequest(BaseModel):
     years_employed: float | None = Field(
         None, ge=0, le=60, description="Years in current employment; omit if not currently employed"
     )
-    income_total: float = Field(..., gt=0, description="Annual income in dataset monetary units")
-    credit_amount: float = Field(
-        ..., gt=0, description="Requested loan amount in dataset monetary units"
+    # Credit and goods-price limits are the maximum observed source values. Income is capped below
+    # the dataset's isolated 117m outlier so a public form cannot generate meaningless SHAP text.
+    income_total: float = Field(
+        ...,
+        gt=0,
+        le=5_000_000,
+        description="Annual income in dataset monetary units (up to 5,000,000)",
     )
-    annuity: float = Field(..., gt=0, description="Monthly repayment in dataset monetary units")
+    credit_amount: float = Field(
+        ..., gt=0, le=4_050_000, description="Requested loan amount in dataset monetary units"
+    )
+    annuity: float = Field(
+        ..., gt=0, le=300_000, description="Monthly repayment in dataset monetary units"
+    )
     goods_price: float | None = Field(
-        None, gt=0, description="Price of goods financed, if applicable"
+        None, gt=0, le=4_050_000, description="Price of goods financed, if applicable"
     )
     owns_car: bool = False
     owns_realty: bool = False

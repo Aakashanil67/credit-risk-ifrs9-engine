@@ -158,6 +158,22 @@ def test_predict_rejects_zero_income(client: TestClient) -> None:
     assert response.status_code == 422
 
 
+def test_predict_rejects_income_above_public_contract_limit(client: TestClient) -> None:
+    applicant = {**VALID_APPLICANT, "income_total": 5_000_001}
+
+    response = client.post("/predict", json=applicant)
+
+    assert response.status_code == 422
+
+
+def test_predict_rejects_credit_above_observed_product_limit(client: TestClient) -> None:
+    applicant = {**VALID_APPLICANT, "credit_amount": 4_050_001}
+
+    response = client.post("/predict", json=applicant)
+
+    assert response.status_code == 422
+
+
 def test_predict_accepts_missing_optional_goods_price_and_occupation(client: TestClient) -> None:
     minimal = {
         "age_years": 25,
