@@ -18,7 +18,7 @@ def load_application_data(path: Path = RAW_TRAIN_PATH) -> pd.DataFrame:
 
 def target_balance(df: pd.DataFrame) -> pd.Series:
     counts = df[TARGET_COL].value_counts(normalize=True).sort_index()
-    counts.index = ["repaid (0)", "defaulted (1)"]
+    counts.index = ["repaid (0)", "payment difficulty (1)"]
     return counts
 
 
@@ -40,10 +40,10 @@ def write_data_dictionary(df: pd.DataFrame, missing: pd.DataFrame, out_path: Pat
         "threshold in the public data, so this project does not invent one.",
         "",
         f"Target balance: {balance['repaid (0)']:.1%} repaid against "
-        f"{balance['defaulted (1)']:.1%} defaulted, "
-        f"a {balance['repaid (0)'] / balance['defaulted (1)']:.1f}:1 imbalance. "
+        f"{balance['payment difficulty (1)']:.1%} payment difficulty events, "
+        f"a {balance['repaid (0)'] / balance['payment difficulty (1)']:.1f}:1 imbalance. "
         "Accuracy is meaningless here: a model that predicts 'repaid' for every applicant "
-        f"scores {balance['repaid (0)']:.1%} accuracy while catching zero defaults.",
+        f"scores {balance['repaid (0)']:.1%} accuracy while identifying no payment difficulty events.",
         "",
         f"## Missing values ({len(missing)} of {df.shape[1]} columns affected)",
         "",

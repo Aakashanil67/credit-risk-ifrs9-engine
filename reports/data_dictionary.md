@@ -2,7 +2,7 @@
 
 307,511 rows, 122 columns. One row is one loan application; `TARGET` is 1 when the competition marks an applicant as having payment difficulty, 0 otherwise. Home Credit intentionally withholds the exact delinquency-day threshold in the public data, so this project does not invent one.
 
-Target balance: 91.9% repaid against 8.1% defaulted, a 11.4:1 imbalance. Accuracy is meaningless here: a model that predicts 'repaid' for every applicant scores 91.9% accuracy while catching zero defaults.
+Target balance: 91.9% repaid against 8.1% payment difficulty events, a 11.4:1 imbalance. Accuracy is meaningless here: a model that predicts 'repaid' for every applicant scores 91.9% accuracy while identifying no payment difficulty events.
 
 ## Missing values (67 of 122 columns affected)
 

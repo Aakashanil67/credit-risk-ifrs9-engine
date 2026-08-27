@@ -24,14 +24,14 @@ jobs:
 
       - run: pytest -v
 
-      - name: Audit pinned direct dependencies
-        run: pip-audit --no-deps -r requirements.txt
+      - name: Audit resolved development dependencies
+        run: pip-audit -r requirements.txt
 
-      - name: Audit API runtime pins
-        run: pip-audit --no-deps -r requirements/api.txt
+      - name: Audit resolved API dependencies
+        run: pip-audit -r requirements/api.txt
 
-      - name: Audit dashboard runtime pins
-        run: pip-audit --no-deps -r app/requirements.txt
+      - name: Audit resolved dashboard dependencies
+        run: pip-audit -r app/requirements.txt
 
   docker-build:
     runs-on: ubuntu-latest
