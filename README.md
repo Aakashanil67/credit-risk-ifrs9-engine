@@ -84,3 +84,7 @@ policy. The threshold, fairness diagnostic, test-fold operating view, model limi
 engineering choices are documented in the [model card](reports/model_card.md),
 [fairness audit](reports/fairness_audit.md), [threshold analysis](reports/threshold_analysis.md),
 and [decisions log](DECISIONS.md).
+
+The public endpoint accepts at most 20 prediction requests per IP address per minute. Monetary
+inputs are bounded to the supported public contract: income up to 5,000,000, credit and goods
+price up to 4,050,000, and annuity up to 300,000 dataset monetary units.

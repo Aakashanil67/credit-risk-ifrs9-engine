@@ -1,7 +1,8 @@
 import numpy as np
 import pandas as pd
 
-from src.explain import shap_raw_scores
+from src.explain import explanation_holdout, shap_raw_scores
+from src.preprocessing import split_data
 from src.reason_codes import humanize_feature, reason_codes
 
 
@@ -69,3 +70,19 @@ def test_shap_raw_scores_add_base_value_to_all_feature_contributions() -> None:
     scores = shap_raw_scores(base_values, values)
 
     np.testing.assert_allclose(scores, [-1.9, -1.1])
+
+
+def test_explanation_holdout_is_the_untouched_test_fold() -> None:
+    """The final model is refit on train+validation, so explanation plots must use test rows."""
+    applications = pd.DataFrame(
+        {
+            "SK_ID_CURR": range(1, 41),
+            "TARGET": [0, 1] * 20,
+            "AMT_CREDIT": np.linspace(100_000, 400_000, 40),
+        }
+    )
+    _train, _validation, expected_test = split_data(applications)
+
+    holdout = explanation_holdout(applications)
+
+    assert holdout.index.equals(expected_test.index)

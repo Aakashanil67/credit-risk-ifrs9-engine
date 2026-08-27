@@ -24,9 +24,7 @@ from src.model_profiles import ModelProfile
 from src.preprocessing import split_data
 from src.reason_codes import reason_codes
 
-SHAP_SAMPLE_SIZE = (
-    3000  # full validation set (61k rows) isn't needed for a stable importance ranking
-)
+SHAP_SAMPLE_SIZE = 3000  # full test set (61k rows) isn't needed for a stable importance ranking
 
 
 def load_model_bundle(profile: ModelProfile):
@@ -42,6 +40,17 @@ def compute_shap_values(model, X: pd.DataFrame) -> shap.Explanation:
 def shap_raw_scores(base_values: np.ndarray, shap_values: np.ndarray) -> np.ndarray:
     """Reconstruct LightGBM's raw margin from Tree SHAP's additive components."""
     return np.asarray(base_values) + np.asarray(shap_values).sum(axis=1)
+
+
+def explanation_holdout(df: pd.DataFrame) -> pd.DataFrame:
+    """Return the untouched test fold for published explanation and calibration artefacts.
+
+    The saved model is refit on train plus validation rows after tuning. Reusing validation here
+    would therefore make the visual diagnostics in-sample, even though the headline test metrics
+    remain honest.
+    """
+    _train, _validation, test = split_data(df, seed=RANDOM_SEED)
+    return test
 
 
 def validate_shap_additivity(model, X: pd.DataFrame, explanation: shap.Explanation) -> None:
@@ -107,13 +116,13 @@ def main() -> None:
     args = parse_args()
     profile = ModelProfile(args.profile)
     df = load_application_data()
-    _train, val, _test = split_data(df, seed=RANDOM_SEED)
+    test = explanation_holdout(df)
 
     bundle = load_model_bundle(profile)
     model = bundle.model
 
-    val_X = build_lgbm_features(val, profile=profile)
-    sample = val_X.sample(n=SHAP_SAMPLE_SIZE, random_state=RANDOM_SEED)
+    test_X = build_lgbm_features(test, profile=profile)
+    sample = test_X.sample(n=SHAP_SAMPLE_SIZE, random_state=RANDOM_SEED)
     explanation = compute_shap_values(model, sample)
     validate_shap_additivity(model, sample, explanation)
 
@@ -133,7 +142,7 @@ def main() -> None:
     proba = model.predict_proba(sample)[:, 1]
     riskiest = np.argsort(proba)[-2:][::-1]
     for rank, row_idx in enumerate(riskiest, start=1):
-        applicant_id = val.loc[sample.index[row_idx], "SK_ID_CURR"]
+        applicant_id = test.loc[sample.index[row_idx], "SK_ID_CURR"]
         shap_row = pd.Series(explanation.values[row_idx], index=sample.columns)
         feature_row = sample.iloc[row_idx]
 
@@ -146,9 +155,9 @@ def main() -> None:
         for code in codes:
             print(f"  - {code}")
 
-    # calibration on the full validation set, not just the SHAP sample — more stable bin estimates
-    full_val_pred = model.predict_proba(val_X)[:, 1]
-    calibration = calibration_summary(val[TARGET_COL], full_val_pred)
+    # Calibration uses the untouched test set, not just the SHAP sample, for stable bin estimates.
+    full_test_pred = model.predict_proba(test_X)[:, 1]
+    calibration = calibration_summary(test[TARGET_COL], full_test_pred)
     plot_calibration_curve(calibration, FIGURES_DIR / f"{profile.value}_calibration_curve.png")
     print(f"Brier score: {calibration['brier_score']:.4f}")
 

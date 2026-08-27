@@ -22,7 +22,7 @@ def toy_applications() -> pd.DataFrame:
 def test_target_balance_matches_known_ratio(toy_applications: pd.DataFrame) -> None:
     balance = target_balance(toy_applications)
     assert balance["repaid (0)"] == pytest.approx(0.75)
-    assert balance["defaulted (1)"] == pytest.approx(0.25)
+    assert balance["payment difficulty (1)"] == pytest.approx(0.25)
 
 
 def test_missing_value_report_excludes_complete_columns(toy_applications: pd.DataFrame) -> None:
