@@ -39,5 +39,12 @@ DECISION_THRESHOLD = (PERFORMING_MARGIN_RATE - OPERATING_COST_RATE - CAPITAL_COS
 )
 DEFAULT_EAD_COL = "AMT_CREDIT"
 
+# Service and monitoring controls for the public demonstration. The thresholds are deliberately
+# configurable examples, not universal lending-policy limits.
+SERVICE_VERSION = "1.3.0"
+MONITORING_PSI_BINS = 10
+MONITORING_EPSILON = 1e-6
+MONITORING_SAMPLE_ROWS = 10_000
+
 # a loan is Stage 2 (lifetime ECL) if current PD has at least doubled since origination
 SICR_PD_RATIO_THRESHOLD = 2.0
