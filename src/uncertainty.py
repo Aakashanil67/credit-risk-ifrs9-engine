@@ -3,6 +3,8 @@
 from dataclasses import dataclass, fields
 
 import numpy as np
+from scipy.stats import ks_2samp
+from sklearn.metrics import average_precision_score, brier_score_loss, log_loss, roc_auc_score
 
 from src.evaluation import binary_metrics
 
@@ -32,17 +34,46 @@ def _validate_bootstrap_options(n_bootstrap: int, confidence_level: float) -> No
         raise ValueError("confidence_level must be strictly between zero and one")
 
 
-def _stratified_indices(y_true: np.ndarray, rng: np.random.Generator) -> np.ndarray:
+def _stratified_indices(
+    y_true: np.ndarray, rng: np.random.Generator, sample_size: int | None = None
+) -> np.ndarray:
+    sample_size = len(y_true) if sample_size is None else sample_size
+    if not 2 <= sample_size <= len(y_true):
+        raise ValueError("sample_size must be between two and the number of rows")
+    negative_count = int(round(sample_size * (y_true == 0).mean()))
+    negative_count = min(max(negative_count, 1), sample_size - 1)
+    class_sizes = {0: negative_count, 1: sample_size - negative_count}
     sampled = [
-        rng.choice(
-            np.flatnonzero(y_true == target), size=int((y_true == target).sum()), replace=True
-        )
+        rng.choice(np.flatnonzero(y_true == target), size=class_sizes[target], replace=True)
         for target in (0, 1)
     ]
     return rng.permutation(np.concatenate(sampled))
 
 
-def _metric_mapping(y_true: np.ndarray, pd_score: np.ndarray) -> dict[str, float]:
+def _metric_mapping(
+    y_true: np.ndarray, pd_score: np.ndarray, metric_names: tuple[str, ...] | None = None
+) -> dict[str, float]:
+    if metric_names is not None:
+        auc = None
+
+        def auc_value() -> float:
+            nonlocal auc
+            if auc is None:
+                auc = float(roc_auc_score(y_true, pd_score))
+            return auc
+
+        calculators = {
+            "auc": auc_value,
+            "gini": lambda: 2 * auc_value() - 1,
+            "ks": lambda: float(ks_2samp(pd_score[y_true == 1], pd_score[y_true == 0]).statistic),
+            "brier": lambda: float(brier_score_loss(y_true, pd_score)),
+            "pr_auc": lambda: float(average_precision_score(y_true, pd_score)),
+            "log_loss": lambda: float(log_loss(y_true, pd_score, labels=[0, 1])),
+        }
+        unknown = set(metric_names).difference(calculators)
+        if unknown:
+            raise ValueError(f"unknown metric names: {sorted(unknown)}")
+        return {name: calculators[name]() for name in metric_names}
     metrics = binary_metrics(y_true, pd_score)
     return {field.name: float(getattr(metrics, field.name)) for field in fields(metrics)}
 
@@ -96,6 +127,8 @@ def paired_bootstrap_metric_deltas(
     n_bootstrap: int = 1000,
     confidence_level: float = 0.95,
     seed: int = 42,
+    metric_names: tuple[str, ...] | None = None,
+    sample_size: int | None = None,
 ) -> dict[str, MetricInterval]:
     """Return paired challenger-minus-incumbent metric intervals on shared resamples."""
     y_true = np.asarray(y_true)
@@ -104,15 +137,15 @@ def paired_bootstrap_metric_deltas(
     _validate_inputs(y_true, incumbent_pd, challenger_pd)
     _validate_bootstrap_options(n_bootstrap, confidence_level)
 
-    incumbent = _metric_mapping(y_true, incumbent_pd)
-    challenger = _metric_mapping(y_true, challenger_pd)
+    incumbent = _metric_mapping(y_true, incumbent_pd, metric_names)
+    challenger = _metric_mapping(y_true, challenger_pd, metric_names)
     estimate = {name: challenger[name] - incumbent[name] for name in incumbent}
     samples = {name: [] for name in estimate}
     rng = np.random.default_rng(seed)
     for _ in range(n_bootstrap):
-        index = _stratified_indices(y_true, rng)
-        incumbent_sample = _metric_mapping(y_true[index], incumbent_pd[index])
-        challenger_sample = _metric_mapping(y_true[index], challenger_pd[index])
+        index = _stratified_indices(y_true, rng, sample_size=sample_size)
+        incumbent_sample = _metric_mapping(y_true[index], incumbent_pd[index], metric_names)
+        challenger_sample = _metric_mapping(y_true[index], challenger_pd[index], metric_names)
         for name in samples:
             samples[name].append(challenger_sample[name] - incumbent_sample[name])
     return _intervals(estimate, samples, n_bootstrap, confidence_level)
