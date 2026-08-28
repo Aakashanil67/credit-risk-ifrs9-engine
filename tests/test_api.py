@@ -1,8 +1,11 @@
+import json
+
 import pandas as pd
 import pytest
 from fastapi.testclient import TestClient
 
-from api.main import app
+from api.main import app, prediction_rate_limiter
+from api.observability import SAFE_LOG_FIELDS
 from api.schemas import ApplicantRequest
 from api.scoring import applicant_to_row, load_artifacts
 from src.config import model_bundle_dir
@@ -32,18 +35,25 @@ VALID_APPLICANT = {
 
 @pytest.fixture
 def client():
+    prediction_rate_limiter._requests.clear()
     with TestClient(app) as c:  # runs the lifespan, so the model actually loads
         yield c
+    prediction_rate_limiter._requests.clear()
 
 
 def test_health_reports_model_loaded(client: TestClient) -> None:
     response = client.get("/health")
     assert response.status_code == 200
-    assert response.json() == {"status": "ok", "model_loaded": True}
+    assert response.json() == {
+        "status": "ok",
+        "model_loaded": True,
+        "service_version": "1.3.0",
+        "model_version": "1.2.0",
+    }
 
 
 def test_openapi_version_tracks_the_public_demo_release(client: TestClient) -> None:
-    assert client.get("/openapi.json").json()["info"]["version"] == "1.2.0"
+    assert client.get("/openapi.json").json()["info"]["version"] == "1.3.0"
 
 
 def test_predict_returns_all_expected_fields(client: TestClient) -> None:
@@ -59,6 +69,31 @@ def test_predict_returns_all_expected_fields(client: TestClient) -> None:
     assert body["lgd_assumption"] == pytest.approx(0.45)
     assert body["model_profile"] == "public_demo"
     assert body["model_name"] == "LightGBMClassifier"
+    assert body["model_version"] == "1.2.0"
+
+
+def test_request_logs_are_allowlisted_for_success_and_rate_limit(
+    client: TestClient, caplog: pytest.LogCaptureFixture
+) -> None:
+    caplog.set_level("INFO")
+    previous_limit = prediction_rate_limiter.limit
+    prediction_rate_limiter.limit = 1
+    try:
+        assert client.post("/predict", json=VALID_APPLICANT).status_code == 200
+        limited = client.post("/predict", json=VALID_APPLICANT)
+    finally:
+        prediction_rate_limiter.limit = previous_limit
+
+    assert limited.status_code == 429
+    records = [
+        json.loads(record.message)
+        for record in caplog.records
+        if '"event": "http_request"' in record.message
+    ]
+    assert {record["status_code"] for record in records} >= {200, 429}
+    for record in records:
+        assert set(record) == SAFE_LOG_FIELDS
+        assert "income_total" not in json.dumps(record)
 
 
 def test_predict_decision_matches_threshold(client: TestClient) -> None:
