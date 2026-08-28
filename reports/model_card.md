@@ -46,6 +46,10 @@ The logistic model uses the same 15 fields and the same train/validation and tes
 LightGBM. The result shows a modest discrimination and probability-error improvement on this one
 historical split. It does not establish out-of-time stability, portability, or commercial value.
 
+The full test-fold uncertainty results are in the [public-demo audit](public_demo_audit.json) and
+[validation report](validation_report.md). Intervals use 1,000 deterministic stratified bootstrap
+samples. They quantify uncertainty on this historical split, not future portfolio performance.
+
 At the illustrative threshold of 0.140351, the test-fold approval rate is 89.25%, default recall
 among declined applications is 25.86%, and observed default precision among declines is 19.42%.
 The calibration intercept is 0.1336 and slope is 1.0560. These are diagnostics, not operating
@@ -77,3 +81,14 @@ a disparate-impact assessment, legal review, or production monitoring programme.
 A real deployment would need local outcome data, legal and policy review, independent validation,
 data-quality controls, reason-code governance, drift monitoring, retraining approval, and human
 oversight. None of those controls can be inferred from the Home Credit competition data.
+
+## Lifecycle controls
+
+The v1.3 service release adds development-only challenger evaluation, an aggregate monitoring
+reference, privacy-safe request telemetry, and a consolidated [validation report](validation_report.md).
+The challenger study found that no candidate passed every predeclared gate, so the fitted v1.2.0
+artifact remains deployed unless a separate promotion review approves a different bundle.
+
+The [monitoring demonstration](monitoring_demo.md) and [monitoring runbook](monitoring_runbook.md)
+use deterministic replay and controlled stress batches. They are simulations, not real-time or
+production monitoring. The monitoring reference retains aggregate distributions only.
