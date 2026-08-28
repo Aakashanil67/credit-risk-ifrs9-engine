@@ -32,6 +32,34 @@ def test_paired_delta_preserves_direction_for_a_better_challenger():
     assert delta["log_loss"].estimate < 0
 
 
+def test_paired_delta_can_use_only_gate_metrics_on_a_stratified_sample():
+    y = np.array([0] * 80 + [1] * 20)
+    incumbent = np.where(y == 1, 0.35, 0.15)
+    challenger = np.where(y == 1, 0.80, 0.05)
+
+    first = paired_bootstrap_metric_deltas(
+        y,
+        incumbent,
+        challenger,
+        metric_names=("auc", "brier"),
+        sample_size=40,
+        n_bootstrap=100,
+        seed=42,
+    )
+    second = paired_bootstrap_metric_deltas(
+        y,
+        incumbent,
+        challenger,
+        metric_names=("auc", "brier"),
+        sample_size=40,
+        n_bootstrap=100,
+        seed=42,
+    )
+
+    assert first == second
+    assert set(first) == {"auc", "brier"}
+
+
 def test_bootstrap_rejects_misaligned_or_single_class_inputs():
     with pytest.raises(ValueError, match="same non-zero length"):
         bootstrap_binary_metric_intervals(np.array([0, 1]), np.array([0.2]))
