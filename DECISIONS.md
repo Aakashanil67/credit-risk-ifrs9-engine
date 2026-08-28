@@ -15,6 +15,11 @@ source-system category into an arbitrary code would return a plausible-looking s
 outside the fitted contract. Cross-field checks also reject impossible employment duration,
 annuity greater than requested credit, and household counts inconsistent with children.
 
+`src.challenger_validation`, `src.public_demo_audit`, and `src.monitoring_demo` run offline and
+write aggregate evidence into `reports/` plus `models/public_demo/monitoring_reference.json`.
+`src.validation_report` joins those artefacts without reading applicant rows. `api.observability`
+builds allowlisted request metadata for the FastAPI middleware.
+
 `src.ecl_core` owns stage assignment and discounted scenario calculations. `src.ecl_demo` owns the
 three stated scenarios. `src.ecl` writes fixed mechanics examples instead of presenting a static
 competition dataset as a real loan portfolio.
@@ -46,6 +51,25 @@ cost, and 45% LGD imply a PD threshold of 0.140351. The formula is visible in
 **Gender is audit-only.** The served model and request schema exclude `CODE_GENDER`. The offline
 fairness report uses it to surface group differences, not to declare the model fair or unfair.
 
+**Challengers stay on development data.** `src.challenger_validation` produces five-fold
+out-of-fold predictions across 246,008 train-plus-validation rows and never reads the 61,503-row
+test fold for candidate selection. Calibrators are cross-fitted a second time, so a calibration
+model predicts only rows outside its own fitting fold.
+
+**No challenger is promoted automatically.** Five candidates were assessed against predeclared
+discrimination and calibration gates with 1,000 paired stratified 20,000-row resamples. None
+passed every gate, so `reports/challenger_validation.json` records a null nomination and the
+v1.2.0 bundle remains the deployed artifact.
+
+**Monitoring references are aggregate and thresholds are configurable.** The reference stores
+feature-bin proportions, category proportions, missingness, score distribution, and approval rate
+from 246,008 development rows; it stores no applicant rows or identifiers. PSI amber/red cutoffs
+of 0.10 and 0.25 are illustrative controls, not universal lending-policy limits.
+
+**HTTP request logs use an allowlist.** `api.observability.request_log_record` emits only event,
+request ID, method, path, status, duration, service version, and model version. Payloads, IP
+addresses, query strings, predictions, and explanation text are not logged.
+
 ## Failures that informed the design
 
 **A Docker mount hid a deployment defect.** Local Compose mounted `models/` over `/app/models`,
@@ -67,7 +91,7 @@ of survival to that month. Stage 3 is explicitly a simplified first discounted c
 
 ## Remaining limits
 
-- There is no out-of-time validation, local outcome data, drift monitor, or scheduled retraining.
+- There is no out-of-time validation, local outcome data, scheduled production feed, or scheduled retraining.
 - The data lacks recoveries, amortisation schedules, and observed risk migration; ECL remains a
   mechanics demonstration.
 - The illustrative decision economics have no lender pricing or capital calibration.
