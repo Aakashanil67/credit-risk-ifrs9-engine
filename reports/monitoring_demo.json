@@ -1,0 +1,524 @@
+{
+  "batches": [
+    {
+      "monitoring": {
+        "approval": {
+          "absolute_delta": 0.0027996683034697822,
+          "rate": 0.8926,
+          "status": "green"
+        },
+        "features": {
+          "AMT_ANNUITY": {
+            "missing_rate": 0.0001,
+            "missing_rate_delta": 5.9350915417384804e-05,
+            "missing_status": "green",
+            "psi": 0.0007569512128851219,
+            "psi_status": "green",
+            "unseen_category_rate": 0.0,
+            "unseen_status": "green"
+          },
+          "AMT_CREDIT": {
+            "missing_rate": 0.0,
+            "missing_rate_delta": 0.0,
+            "missing_status": "green",
+            "psi": 0.0008057762712122036,
+            "psi_status": "green",
+            "unseen_category_rate": 0.0,
+            "unseen_status": "green"
+          },
+          "AMT_GOODS_PRICE": {
+            "missing_rate": 0.0011,
+            "missing_rate_delta": 0.00021384995609898872,
+            "missing_status": "green",
+            "psi": 0.000763714816121469,
+            "psi_status": "green",
+            "unseen_category_rate": 0.0,
+            "unseen_status": "green"
+          },
+          "AMT_INCOME_TOTAL": {
+            "missing_rate": 0.0,
+            "missing_rate_delta": 0.0,
+            "missing_status": "green",
+            "psi": 0.0016202917627897813,
+            "psi_status": "green",
+            "unseen_category_rate": 0.0,
+            "unseen_status": "green"
+          },
+          "CNT_CHILDREN": {
+            "missing_rate": 0.0,
+            "missing_rate_delta": 0.0,
+            "missing_status": "green",
+            "psi": 2.7616873007093653e-05,
+            "psi_status": "green",
+            "unseen_category_rate": 0.0,
+            "unseen_status": "green"
+          },
+          "CNT_FAM_MEMBERS": {
+            "missing_rate": 0.0,
+            "missing_rate_delta": 8.129816916523039e-06,
+            "missing_status": "green",
+            "psi": 2.9841107370315656e-05,
+            "psi_status": "green",
+            "unseen_category_rate": 0.0,
+            "unseen_status": "green"
+          },
+          "DAYS_BIRTH": {
+            "missing_rate": 0.0,
+            "missing_rate_delta": 0.0,
+            "missing_status": "green",
+            "psi": 0.000885807941581177,
+            "psi_status": "green",
+            "unseen_category_rate": 0.0,
+            "unseen_status": "green"
+          },
+          "DAYS_EMPLOYED": {
+            "missing_rate": 0.1851,
+            "missing_rate_delta": 0.004837569509934636,
+            "missing_status": "green",
+            "psi": 0.0007270092971438137,
+            "psi_status": "green",
+            "unseen_category_rate": 0.0,
+            "unseen_status": "green"
+          },
+          "FLAG_OWN_CAR": {
+            "missing_rate": 0.0,
+            "missing_rate_delta": 0.0,
+            "missing_status": "green",
+            "psi": 7.036845134581164e-05,
+            "psi_status": "green",
+            "unseen_category_rate": 0.0,
+            "unseen_status": "green"
+          },
+          "FLAG_OWN_REALTY": {
+            "missing_rate": 0.0,
+            "missing_rate_delta": 0.0,
+            "missing_status": "green",
+            "psi": 4.5086523766547665e-05,
+            "psi_status": "green",
+            "unseen_category_rate": 0.0,
+            "unseen_status": "green"
+          },
+          "NAME_CONTRACT_TYPE": {
+            "missing_rate": 0.0,
+            "missing_rate_delta": 0.0,
+            "missing_status": "green",
+            "psi": 0.00042892827349148616,
+            "psi_status": "green",
+            "unseen_category_rate": 0.0,
+            "unseen_status": "green"
+          },
+          "NAME_EDUCATION_TYPE": {
+            "missing_rate": 0.0,
+            "missing_rate_delta": 0.0,
+            "missing_status": "green",
+            "psi": 0.000991799360048835,
+            "psi_status": "green",
+            "unseen_category_rate": 0.0,
+            "unseen_status": "green"
+          },
+          "NAME_FAMILY_STATUS": {
+            "missing_rate": 0.0,
+            "missing_rate_delta": 0.0,
+            "missing_status": "green",
+            "psi": 0.0006374891354369762,
+            "psi_status": "green",
+            "unseen_category_rate": 0.0,
+            "unseen_status": "green"
+          },
+          "NAME_INCOME_TYPE": {
+            "missing_rate": 0.0,
+            "missing_rate_delta": 0.0,
+            "missing_status": "green",
+            "psi": 0.0004745546986559893,
+            "psi_status": "green",
+            "unseen_category_rate": 0.0,
+            "unseen_status": "green"
+          },
+          "OCCUPATION_TYPE": {
+            "missing_rate": 0.3201,
+            "missing_rate_delta": 0.006167119768462792,
+            "missing_status": "green",
+            "psi": 0.0017074496012137222,
+            "psi_status": "green",
+            "unseen_category_rate": 0.0,
+            "unseen_status": "green"
+          }
+        },
+        "model_version": "1.2.0",
+        "overall_status": "amber",
+        "performance": {
+          "auc": 0.674272067889797,
+          "auc_drop": 0.04900913504976756,
+          "auc_status": "amber",
+          "brier": 0.06898741012195088,
+          "brier_increase": 0.0,
+          "brier_status": "green",
+          "gini": 0.348544135779594,
+          "ks": 0.25900896348351826,
+          "log_loss": 0.25769063587618135,
+          "pr_auc": 0.15051603162999527
+        },
+        "row_count": 10000,
+        "score": {
+          "mean_pd": 0.07986744040413012,
+          "psi": 0.0006647727247170293,
+          "status": "green"
+        }
+      },
+      "name": "baseline_replay",
+      "transformations": {
+        "credit_multiplier": 1.0,
+        "income_multiplier": 1.0,
+        "occupation_missing_rate": 0.0
+      }
+    },
+    {
+      "monitoring": {
+        "approval": {
+          "absolute_delta": 0.006300331696530215,
+          "rate": 0.8835,
+          "status": "green"
+        },
+        "features": {
+          "AMT_ANNUITY": {
+            "missing_rate": 0.0001,
+            "missing_rate_delta": 5.9350915417384804e-05,
+            "missing_status": "green",
+            "psi": 0.0007569512128851219,
+            "psi_status": "green",
+            "unseen_category_rate": 0.0,
+            "unseen_status": "green"
+          },
+          "AMT_CREDIT": {
+            "missing_rate": 0.0,
+            "missing_rate_delta": 0.0,
+            "missing_status": "green",
+            "psi": 0.019364566736759306,
+            "psi_status": "green",
+            "unseen_category_rate": 0.0,
+            "unseen_status": "green"
+          },
+          "AMT_GOODS_PRICE": {
+            "missing_rate": 0.0011,
+            "missing_rate_delta": 0.00021384995609898872,
+            "missing_status": "green",
+            "psi": 0.000763714816121469,
+            "psi_status": "green",
+            "unseen_category_rate": 0.0,
+            "unseen_status": "green"
+          },
+          "AMT_INCOME_TOTAL": {
+            "missing_rate": 0.0,
+            "missing_rate_delta": 0.0,
+            "missing_status": "green",
+            "psi": 0.3708092528032161,
+            "psi_status": "red",
+            "unseen_category_rate": 0.0,
+            "unseen_status": "green"
+          },
+          "CNT_CHILDREN": {
+            "missing_rate": 0.0,
+            "missing_rate_delta": 0.0,
+            "missing_status": "green",
+            "psi": 2.7616873007093653e-05,
+            "psi_status": "green",
+            "unseen_category_rate": 0.0,
+            "unseen_status": "green"
+          },
+          "CNT_FAM_MEMBERS": {
+            "missing_rate": 0.0,
+            "missing_rate_delta": 8.129816916523039e-06,
+            "missing_status": "green",
+            "psi": 2.9841107370315656e-05,
+            "psi_status": "green",
+            "unseen_category_rate": 0.0,
+            "unseen_status": "green"
+          },
+          "DAYS_BIRTH": {
+            "missing_rate": 0.0,
+            "missing_rate_delta": 0.0,
+            "missing_status": "green",
+            "psi": 0.000885807941581177,
+            "psi_status": "green",
+            "unseen_category_rate": 0.0,
+            "unseen_status": "green"
+          },
+          "DAYS_EMPLOYED": {
+            "missing_rate": 0.1851,
+            "missing_rate_delta": 0.004837569509934636,
+            "missing_status": "green",
+            "psi": 0.0007270092971438137,
+            "psi_status": "green",
+            "unseen_category_rate": 0.0,
+            "unseen_status": "green"
+          },
+          "FLAG_OWN_CAR": {
+            "missing_rate": 0.0,
+            "missing_rate_delta": 0.0,
+            "missing_status": "green",
+            "psi": 7.036845134581164e-05,
+            "psi_status": "green",
+            "unseen_category_rate": 0.0,
+            "unseen_status": "green"
+          },
+          "FLAG_OWN_REALTY": {
+            "missing_rate": 0.0,
+            "missing_rate_delta": 0.0,
+            "missing_status": "green",
+            "psi": 4.5086523766547665e-05,
+            "psi_status": "green",
+            "unseen_category_rate": 0.0,
+            "unseen_status": "green"
+          },
+          "NAME_CONTRACT_TYPE": {
+            "missing_rate": 0.0,
+            "missing_rate_delta": 0.0,
+            "missing_status": "green",
+            "psi": 0.00042892827349148616,
+            "psi_status": "green",
+            "unseen_category_rate": 0.0,
+            "unseen_status": "green"
+          },
+          "NAME_EDUCATION_TYPE": {
+            "missing_rate": 0.0,
+            "missing_rate_delta": 0.0,
+            "missing_status": "green",
+            "psi": 0.000991799360048835,
+            "psi_status": "green",
+            "unseen_category_rate": 0.0,
+            "unseen_status": "green"
+          },
+          "NAME_FAMILY_STATUS": {
+            "missing_rate": 0.0,
+            "missing_rate_delta": 0.0,
+            "missing_status": "green",
+            "psi": 0.0006374891354369762,
+            "psi_status": "green",
+            "unseen_category_rate": 0.0,
+            "unseen_status": "green"
+          },
+          "NAME_INCOME_TYPE": {
+            "missing_rate": 0.0,
+            "missing_rate_delta": 0.0,
+            "missing_status": "green",
+            "psi": 0.0004745546986559893,
+            "psi_status": "green",
+            "unseen_category_rate": 0.0,
+            "unseen_status": "green"
+          },
+          "OCCUPATION_TYPE": {
+            "missing_rate": 0.4201,
+            "missing_rate_delta": 0.10616711976846277,
+            "missing_status": "red",
+            "psi": 0.05092783086840598,
+            "psi_status": "green",
+            "unseen_category_rate": 0.0,
+            "unseen_status": "green"
+          }
+        },
+        "model_version": "1.2.0",
+        "overall_status": "red",
+        "performance": {
+          "auc": 0.673197182600376,
+          "auc_drop": 0.05008402033918857,
+          "auc_status": "red",
+          "brier": 0.06901386727994696,
+          "brier_increase": 0.0,
+          "brier_status": "green",
+          "gini": 0.34639436520075195,
+          "ks": 0.26268104956530136,
+          "log_loss": 0.25792540338550823,
+          "pr_auc": 0.15045767644940944
+        },
+        "row_count": 10000,
+        "score": {
+          "mean_pd": 0.08289631229654897,
+          "psi": 0.004234315439774964,
+          "status": "green"
+        }
+      },
+      "name": "mild_shift",
+      "transformations": {
+        "credit_multiplier": 1.05,
+        "income_multiplier": 0.9,
+        "occupation_missing_rate": 0.1
+      }
+    },
+    {
+      "monitoring": {
+        "approval": {
+          "absolute_delta": 0.04380033169653019,
+          "rate": 0.846,
+          "status": "green"
+        },
+        "features": {
+          "AMT_ANNUITY": {
+            "missing_rate": 0.0001,
+            "missing_rate_delta": 5.9350915417384804e-05,
+            "missing_status": "green",
+            "psi": 0.0007569512128851219,
+            "psi_status": "green",
+            "unseen_category_rate": 0.0,
+            "unseen_status": "green"
+          },
+          "AMT_CREDIT": {
+            "missing_rate": 0.0,
+            "missing_rate_delta": 0.0,
+            "missing_status": "green",
+            "psi": 0.1627913405844158,
+            "psi_status": "amber",
+            "unseen_category_rate": 0.0,
+            "unseen_status": "green"
+          },
+          "AMT_GOODS_PRICE": {
+            "missing_rate": 0.0011,
+            "missing_rate_delta": 0.00021384995609898872,
+            "missing_status": "green",
+            "psi": 0.000763714816121469,
+            "psi_status": "green",
+            "unseen_category_rate": 0.0,
+            "unseen_status": "green"
+          },
+          "AMT_INCOME_TOTAL": {
+            "missing_rate": 0.0,
+            "missing_rate_delta": 0.0,
+            "missing_status": "green",
+            "psi": 0.7936073305155307,
+            "psi_status": "red",
+            "unseen_category_rate": 0.0,
+            "unseen_status": "green"
+          },
+          "CNT_CHILDREN": {
+            "missing_rate": 0.0,
+            "missing_rate_delta": 0.0,
+            "missing_status": "green",
+            "psi": 2.7616873007093653e-05,
+            "psi_status": "green",
+            "unseen_category_rate": 0.0,
+            "unseen_status": "green"
+          },
+          "CNT_FAM_MEMBERS": {
+            "missing_rate": 0.0,
+            "missing_rate_delta": 8.129816916523039e-06,
+            "missing_status": "green",
+            "psi": 2.9841107370315656e-05,
+            "psi_status": "green",
+            "unseen_category_rate": 0.0,
+            "unseen_status": "green"
+          },
+          "DAYS_BIRTH": {
+            "missing_rate": 0.0,
+            "missing_rate_delta": 0.0,
+            "missing_status": "green",
+            "psi": 0.000885807941581177,
+            "psi_status": "green",
+            "unseen_category_rate": 0.0,
+            "unseen_status": "green"
+          },
+          "DAYS_EMPLOYED": {
+            "missing_rate": 0.1851,
+            "missing_rate_delta": 0.004837569509934636,
+            "missing_status": "green",
+            "psi": 0.0007270092971438137,
+            "psi_status": "green",
+            "unseen_category_rate": 0.0,
+            "unseen_status": "green"
+          },
+          "FLAG_OWN_CAR": {
+            "missing_rate": 0.0,
+            "missing_rate_delta": 0.0,
+            "missing_status": "green",
+            "psi": 7.036845134581164e-05,
+            "psi_status": "green",
+            "unseen_category_rate": 0.0,
+            "unseen_status": "green"
+          },
+          "FLAG_OWN_REALTY": {
+            "missing_rate": 0.0,
+            "missing_rate_delta": 0.0,
+            "missing_status": "green",
+            "psi": 4.5086523766547665e-05,
+            "psi_status": "green",
+            "unseen_category_rate": 0.0,
+            "unseen_status": "green"
+          },
+          "NAME_CONTRACT_TYPE": {
+            "missing_rate": 0.0,
+            "missing_rate_delta": 0.0,
+            "missing_status": "green",
+            "psi": 0.00042892827349148616,
+            "psi_status": "green",
+            "unseen_category_rate": 0.0,
+            "unseen_status": "green"
+          },
+          "NAME_EDUCATION_TYPE": {
+            "missing_rate": 0.0,
+            "missing_rate_delta": 0.0,
+            "missing_status": "green",
+            "psi": 0.000991799360048835,
+            "psi_status": "green",
+            "unseen_category_rate": 0.0,
+            "unseen_status": "green"
+          },
+          "NAME_FAMILY_STATUS": {
+            "missing_rate": 0.0,
+            "missing_rate_delta": 0.0,
+            "missing_status": "green",
+            "psi": 0.0006374891354369762,
+            "psi_status": "green",
+            "unseen_category_rate": 0.0,
+            "unseen_status": "green"
+          },
+          "NAME_INCOME_TYPE": {
+            "missing_rate": 0.0,
+            "missing_rate_delta": 0.0,
+            "missing_status": "green",
+            "psi": 0.0004745546986559893,
+            "psi_status": "green",
+            "unseen_category_rate": 0.0,
+            "unseen_status": "green"
+          },
+          "OCCUPATION_TYPE": {
+            "missing_rate": 0.5701,
+            "missing_rate_delta": 0.25616711976846285,
+            "missing_status": "red",
+            "psi": 0.2741793761285491,
+            "psi_status": "red",
+            "unseen_category_rate": 0.0,
+            "unseen_status": "green"
+          }
+        },
+        "model_version": "1.2.0",
+        "overall_status": "red",
+        "performance": {
+          "auc": 0.6703139072118872,
+          "auc_drop": 0.05296729572767733,
+          "auc_status": "red",
+          "brier": 0.06938578634815429,
+          "brier_increase": 0.0,
+          "brier_status": "green",
+          "gini": 0.34062781442377443,
+          "ks": 0.2613699913082733,
+          "log_loss": 0.2599461653027215,
+          "pr_auc": 0.1489848783035349
+        },
+        "row_count": 10000,
+        "score": {
+          "mean_pd": 0.09338303487831226,
+          "psi": 0.08678499075695084,
+          "status": "green"
+        }
+      },
+      "name": "severe_shift",
+      "transformations": {
+        "credit_multiplier": 1.2,
+        "income_multiplier": 0.7,
+        "occupation_missing_rate": 0.25
+      }
+    }
+  ],
+  "model_version": "1.2.0",
+  "reference_rows": 246008,
+  "replay_rows": 10000,
+  "seed": 42
+}
