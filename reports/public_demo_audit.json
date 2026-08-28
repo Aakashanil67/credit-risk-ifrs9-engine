@@ -1,0 +1,71 @@
+{
+  "bootstrap_samples": 1000,
+  "calibration": {
+    "intercept": 0.13363914232599566,
+    "slope": 1.056005891050179
+  },
+  "gender_approval_gap": {
+    "confidence_level": 0.95,
+    "estimate": 0.08057803528881391,
+    "lower": 0.07486026028153929,
+    "n_bootstrap": 1000,
+    "upper": 0.08637485344612139
+  },
+  "metric_intervals": {
+    "auc": {
+      "confidence_level": 0.95,
+      "estimate": 0.677370713463237,
+      "lower": 0.6696625065276169,
+      "n_bootstrap": 1000,
+      "upper": 0.6855585797494271
+    },
+    "brier": {
+      "confidence_level": 0.95,
+      "estimate": 0.07160176656203984,
+      "lower": 0.07134119209487025,
+      "n_bootstrap": 1000,
+      "upper": 0.07185508499444561
+    },
+    "gini": {
+      "confidence_level": 0.95,
+      "estimate": 0.3547414269264739,
+      "lower": 0.3393250130552339,
+      "n_bootstrap": 1000,
+      "upper": 0.37111715949885427
+    },
+    "ks": {
+      "confidence_level": 0.95,
+      "estimate": 0.26108462303085406,
+      "lower": 0.24773600895539707,
+      "n_bootstrap": 1000,
+      "upper": 0.27644378606309106
+    },
+    "log_loss": {
+      "confidence_level": 0.95,
+      "estimate": 0.26516725147802966,
+      "lower": 0.26380178815637745,
+      "n_bootstrap": 1000,
+      "upper": 0.26649873839029575
+    },
+    "pr_auc": {
+      "confidence_level": 0.95,
+      "estimate": 0.16115946149581065,
+      "lower": 0.15487269562329772,
+      "n_bootstrap": 1000,
+      "upper": 0.16852072490081735
+    }
+  },
+  "model_version": "1.2.0",
+  "seed": 42,
+  "test_rows": 61503,
+  "threshold_metrics": {
+    "approval_rate": 0.8924930491195552,
+    "false_negatives": 3681,
+    "false_positives": 5328,
+    "precision": 0.19419237749546278,
+    "recall": 0.25861027190332325,
+    "threshold": 0.14035087719298242,
+    "true_negatives": 51210,
+    "true_positives": 1284
+  }
+}
