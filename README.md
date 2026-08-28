@@ -9,6 +9,18 @@ Try the [dashboard](https://credit-risk-ifrs9-engine.streamlit.app) or inspect t
 [API documentation](https://credit-risk-api-92it.onrender.com/docs). The Render service uses a
 free instance and can take a short time to wake after inactivity.
 
+```mermaid
+flowchart LR
+    A[Home Credit application data] --> B[Deterministic 60/20/20 split]
+    B --> C[Development-only CV and challengers]
+    B --> D[Frozen test evaluation]
+    C --> E[Versioned LightGBM bundle v1.2]
+    E --> F[FastAPI service v1.3]
+    E --> G[Streamlit dashboard]
+    E --> H[Aggregate monitoring reference]
+    H --> I[Replay and stress monitoring report]
+```
+
 ## What is deployed
 
 The public demo accepts 15 inputs an applicant can reasonably provide at application time: loan
@@ -55,6 +67,27 @@ uvicorn api.main:app --reload
 streamlit run app/dashboard.py
 ```
 
+### Reproduce the v1.3 lifecycle evidence
+
+Run these commands after placing `application_train.csv` in `data/`. Challenger selection uses
+only the train-plus-validation development rows. The audit uses the frozen test fold. Monitoring
+replays a deterministic sample from the same historical data; it is not a production feed.
+
+```powershell
+python -m src.challenger_validation
+python -m src.public_demo_audit
+python -m src.monitoring_demo
+python -m src.validation_report
+python scripts/load_test.py --url http://localhost:8000 --requests 15 --concurrency 3
+```
+
+The first four commands update `reports/challenger_validation.*`,
+`reports/public_demo_audit.json`, `reports/fairness_audit.md`, `reports/threshold_analysis.md`,
+`models/public_demo/monitoring_reference.json`, `reports/monitoring_demo.*`, and
+`reports/validation_report.md`. `validation_report` consumes the earlier generated JSON files.
+The load command needs a running API but does not need the raw dataset; it prints aggregate timing
+and status counts only.
+
 The fitted `models/public_demo/` bundle is versioned so the services run from a clean checkout;
 retraining requires the Kaggle data. For the containerised stack:
 
@@ -84,6 +117,20 @@ policy. The threshold, fairness diagnostic, test-fold operating view, model limi
 engineering choices are documented in the [model card](reports/model_card.md),
 [fairness audit](reports/fairness_audit.md), [threshold analysis](reports/threshold_analysis.md),
 and [decisions log](DECISIONS.md).
+
+## Model lifecycle evidence
+
+The v1.3 service release adds validation and observability controls without replacing the fitted
+v1.2.0 LightGBM bundle. The development-only challenger study evaluated five candidates using
+out-of-fold development predictions. No candidate passed every predeclared gate, so the incumbent
+remains preferred and no model is promoted automatically.
+
+The frozen test-fold diagnostics include 1,000 deterministic stratified bootstrap intervals in the
+[public-demo audit](reports/public_demo_audit.json). The [monitoring demonstration](reports/monitoring_demo.md)
+uses deterministic replay and controlled stress transformations against a versioned aggregate
+reference. It is a reproducible simulation, not real production monitoring. The consolidated
+[validation report](reports/validation_report.md) and [monitoring runbook](reports/monitoring_runbook.md)
+summarise the evidence and the controls a real lender would still need.
 
 The public endpoint accepts at most 20 prediction requests per IP address per minute. Monetary
 inputs are bounded to the supported public contract: income up to 5,000,000, credit and goods
