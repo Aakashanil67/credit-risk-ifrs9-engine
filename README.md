@@ -88,7 +88,9 @@ The first four commands update `reports/challenger_validation.*`,
 `models/public_demo/monitoring_reference.json`, `reports/monitoring_demo.*`, and
 `reports/validation_report.md`. `validation_report` consumes the earlier generated JSON files.
 The load command needs a running API but does not need the raw dataset; it prints aggregate timing
-and status counts only, and exits non-zero when requests fail.
+and status counts only. It exits non-zero on transport errors, unexpected HTTP responses,
+incomplete success counts or server errors. `--allow-rate-limit-test` accepts 429 responses only
+when the command is deliberately exercising the rate limit.
 
 The fitted `models/public_demo/` bundle is versioned so the services run from a clean checkout;
 retraining requires the Kaggle data. For the containerised stack:
