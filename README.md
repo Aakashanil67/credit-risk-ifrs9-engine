@@ -57,6 +57,8 @@ and place it in `data/`; the raw competition data is intentionally excluded from
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
 pip install -r requirements.txt
+python scripts/check_environment.py
+python -m pip check
 
 python -m src.train_lgbm --profile public_demo
 python -m src.explain --profile public_demo
@@ -66,6 +68,10 @@ python -m src.ecl
 uvicorn api.main:app --reload
 streamlit run app/dashboard.py
 ```
+
+Run the checker from the activated environment. Model deserialisation depends on the pinned
+NumPy, pandas, scikit-learn and LightGBM versions; a globally installed package set is not a
+supported runtime.
 
 ### Reproduce the v1.3 lifecycle evidence
 
