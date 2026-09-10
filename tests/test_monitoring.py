@@ -29,7 +29,11 @@ def test_monitoring_reference_is_aggregate_json_without_rows(tmp_path):
         }
     )
     reference = build_monitoring_reference(
-        X, pd_score=np.array([0.1, 0.2, 0.3, 0.4]), threshold=0.25, model_version="1.2.0"
+        X,
+        pd_score=np.array([0.1, 0.2, 0.3, 0.4]),
+        threshold=0.25,
+        model_version="1.2.0",
+        reference_scope="frozen_test_reference_window",
     )
     path = tmp_path / "reference.json"
 
@@ -38,6 +42,8 @@ def test_monitoring_reference_is_aggregate_json_without_rows(tmp_path):
 
     assert restored == reference
     assert restored["row_count"] == 4
+    assert restored["schema_version"] == 2
+    assert restored["reference_scope"] == "frozen_test_reference_window"
     assert set(restored["features"]) == {"income", "segment"}
     assert "rows" not in json.dumps(restored).lower()
 

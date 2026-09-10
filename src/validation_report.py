@@ -39,6 +39,9 @@ def build_validation_report(
     data_scope = _require(challenger, "data_scope", "challenger")
     nomination = challenger.get("nomination")
     candidates = _require(challenger, "candidates", "challenger")
+    reference_scope = _require(monitoring, "reference_scope", "monitoring")
+    reference_rows = _require(monitoring, "reference_rows", "monitoring")
+    replay_rows = _require(monitoring, "replay_rows", "monitoring")
     batches = _require(monitoring, "batches", "monitoring")
     if not batches:
         raise ValueError("monitoring batches must not be empty")
@@ -106,6 +109,10 @@ def build_validation_report(
         "## 7. Monitoring reference and stress results",
         "",
         "These are simulated monitoring replays and controlled stresses, not production observations.",
+        f"- Reference scope: **{reference_scope}**",
+        f"- Reference rows: **{reference_rows:,}**",
+        f"- Replay rows: **{replay_rows:,}**",
+        "The reference and replay windows are disjoint and both are out of sample relative to model fitting.",
         "",
         "| batch | status |",
         "|---|---|",

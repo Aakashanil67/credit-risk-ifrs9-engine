@@ -46,10 +46,14 @@ The offline gender diagnostic estimates a female-minus-male approval-rate differ
 ## 7. Monitoring reference and stress results
 
 These are simulated monitoring replays and controlled stresses, not production observations.
+- Reference scope: **frozen_test_reference_window**
+- Reference rows: **51,503**
+- Replay rows: **10,000**
+The reference and replay windows are disjoint and both are out of sample relative to model fitting.
 
 | batch | status |
 |---|---|
-| baseline_replay | amber |
+| baseline_replay | green |
 | mild_shift | red |
 | severe_shift | red |
 

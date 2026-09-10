@@ -5,6 +5,7 @@ import json
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+from sklearn.model_selection import train_test_split
 
 from src.artifacts import load_artifact_bundle
 from src.config import (
@@ -42,6 +43,26 @@ _STRESS_SETTINGS = {
         "occupation_missing_rate": 0.25,
     },
 }
+
+
+def split_monitoring_windows(
+    test: pd.DataFrame,
+    replay_rows: int,
+    seed: int = RANDOM_SEED,
+) -> tuple[pd.DataFrame, pd.DataFrame]:
+    if TARGET_COL not in test:
+        raise ValueError(f"monitoring source is missing {TARGET_COL}")
+    if not 1 <= replay_rows < len(test):
+        raise ValueError("replay_rows must leave at least one reference row")
+    if test[TARGET_COL].nunique() < 2:
+        raise ValueError("monitoring source must contain both target classes")
+    reference, replay = train_test_split(
+        test,
+        test_size=replay_rows,
+        random_state=seed,
+        stratify=test[TARGET_COL],
+    )
+    return reference.reset_index(drop=True), replay.reset_index(drop=True)
 
 
 def apply_stress(batch: pd.DataFrame, severity: str, seed: int = RANDOM_SEED) -> pd.DataFrame:
@@ -98,10 +119,16 @@ def render_monitoring_report(result: dict) -> str:
         "historical labels are not newly observed outcomes.",
         "",
     ]
+    if result.get("reference_scope") == "frozen_test_reference_window":
+        lines += [
+            "The monitoring reference is an out-of-sample monitoring reference window, "
+            "disjoint from the replay window.",
+            "",
+        ]
     if not result.get("batches"):
         return "\n".join(lines)
     lines += [
-        f"- Development reference rows: **{result['reference_rows']:,}**",
+        f"- Out-of-sample reference rows: **{result['reference_rows']:,}**",
         f"- Replay rows per batch: **{result['replay_rows']:,}**",
         f"- Model version: **{result['model_version']}**",
         "",
@@ -179,22 +206,22 @@ def run_monitoring_demo() -> dict:
     """Build reference distributions and score deterministic replay/stress batches."""
     profile = ModelProfile.PUBLIC_DEMO
     bundle = load_artifact_bundle(model_bundle_dir(profile.value))
-    train, validation, test = split_data(load_application_data(), seed=RANDOM_SEED)
-    development = pd.concat([train, validation], ignore_index=True)
-    development_X, development_scores = _score_raw_frame(development, bundle, profile)
+    _, _, test = split_data(load_application_data(), seed=RANDOM_SEED)
+    reference_raw, replay = split_monitoring_windows(
+        test, replay_rows=MONITORING_SAMPLE_ROWS, seed=RANDOM_SEED
+    )
+    reference_X, reference_scores = _score_raw_frame(reference_raw, bundle, profile)
     reference = build_monitoring_reference(
-        development_X,
-        development_scores,
+        reference_X,
+        reference_scores,
         threshold=(0.08 / 0.57),
         model_version=bundle.metadata["model_version"],
-        y_true=development[TARGET_COL].to_numpy(),
+        y_true=reference_raw[TARGET_COL].to_numpy(),
+        reference_scope="frozen_test_reference_window",
     )
     save_monitoring_reference(
         reference, model_bundle_dir(profile.value) / "monitoring_reference.json"
     )
-    replay = test.sample(
-        n=min(MONITORING_SAMPLE_ROWS, len(test)), random_state=RANDOM_SEED
-    ).reset_index(drop=True)
     raw_features = replay.drop(columns=[TARGET_COL])
     batches = []
     for name, settings in _STRESS_SETTINGS.items():
@@ -206,7 +233,9 @@ def run_monitoring_demo() -> dict:
         batches.append(_batch_record(name, settings, monitoring))
     return {
         "model_version": bundle.metadata["model_version"],
-        "reference_rows": len(development),
+        "reference_scope": "frozen_test_reference_window",
+        "replay_scope": "disjoint_frozen_test_replay_window",
+        "reference_rows": len(reference_raw),
         "replay_rows": len(replay),
         "seed": RANDOM_SEED,
         "batches": batches,
