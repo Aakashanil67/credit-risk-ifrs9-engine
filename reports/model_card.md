@@ -90,5 +90,6 @@ The challenger study found that no candidate passed every predeclared gate, so t
 artifact remains deployed unless a separate promotion review approves a different bundle.
 
 The [monitoring demonstration](monitoring_demo.md) and [monitoring runbook](monitoring_runbook.md)
-use deterministic replay and controlled stress batches. They are simulations, not real-time or
-production monitoring. The monitoring reference retains aggregate distributions only.
+use a disjoint held-out test reference window, deterministic replay and controlled stress batches.
+They are simulations, not real-time or production monitoring. The monitoring reference retains
+aggregate distributions only.
