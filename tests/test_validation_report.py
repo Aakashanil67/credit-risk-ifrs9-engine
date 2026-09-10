@@ -11,7 +11,12 @@ def _sources() -> tuple[dict, dict, dict, dict]:
             "gender_approval_gap": {"estimate": 0.08, "lower": 0.07, "upper": 0.09},
         },
         {"data_scope": "development_oof_only", "nomination": None, "candidates": []},
-        {"batches": [{"name": "baseline_replay", "overall_status": "green"}]},
+        {
+            "reference_scope": "frozen_test_reference_window",
+            "reference_rows": 800,
+            "replay_rows": 200,
+            "batches": [{"name": "baseline_replay", "overall_status": "green"}],
+        },
     )
 
 
@@ -22,6 +27,9 @@ def test_validation_report_separates_model_version_from_service_release() -> Non
     assert "Service release: **1.3.0**" in report
     assert "incumbent remains preferred" in report
     assert "simulated monitoring" in report.lower()
+    assert "Reference rows: **800**" in report
+    assert "Replay rows: **200**" in report
+    assert "frozen_test_reference_window" in report
     assert "not an independent validation" in report.lower()
 
 

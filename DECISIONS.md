@@ -61,10 +61,12 @@ discrimination and calibration gates with 1,000 paired stratified 20,000-row res
 passed every gate, so `reports/challenger_validation.json` records a null nomination and the
 v1.2.0 bundle remains the deployed artifact.
 
-**Monitoring references are aggregate and thresholds are configurable.** The reference stores
-feature-bin proportions, category proportions, missingness, score distribution, and approval rate
-from 246,008 development rows; it stores no applicant rows or identifiers. PSI amber/red cutoffs
-of 0.10 and 0.25 are illustrative controls, not universal lending-policy limits.
+**Monitoring references are aggregate, out of sample, and thresholds are configurable.** After
+challenger selection, the frozen test fold is split into a 51,503-row reference window and a
+disjoint 10,000-row replay window. The reference stores feature-bin proportions, category
+proportions, missingness, score distribution, approval rate and held-out performance metrics; it
+stores no applicant rows or identifiers. PSI amber/red cutoffs of 0.10 and 0.25 are illustrative
+controls, not universal lending-policy limits.
 
 **HTTP request logs use an allowlist.** `api.observability.request_log_record` emits only event,
 request ID, method, path, status, duration, service version, and model version. Payloads, IP

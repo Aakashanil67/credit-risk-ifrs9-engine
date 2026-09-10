@@ -70,15 +70,17 @@ streamlit run app/dashboard.py
 ### Reproduce the v1.3 lifecycle evidence
 
 Run these commands after placing `application_train.csv` in `data/`. Challenger selection uses
-only the train-plus-validation development rows. The audit uses the frozen test fold. Monitoring
-replays a deterministic sample from the same historical data; it is not a production feed.
+only the train-plus-validation development rows. After challenger selection and final evaluation,
+monitoring splits the frozen test fold into a 51,503-row reference window and a disjoint 10,000-row
+replay window; it is not a production feed.
 
 ```powershell
-python -m src.challenger_validation
-python -m src.public_demo_audit
-python -m src.monitoring_demo
-python -m src.validation_report
-python scripts/load_test.py --url http://localhost:8000 --requests 15 --concurrency 3
+$py = ".\.venv\Scripts\python.exe"
+& $py -m src.challenger_validation
+& $py -m src.public_demo_audit
+& $py -m src.monitoring_demo
+& $py -m src.validation_report
+& $py scripts/load_test.py --url http://localhost:8000 --requests 15 --concurrency 3
 ```
 
 The first four commands update `reports/challenger_validation.*`,
@@ -86,7 +88,7 @@ The first four commands update `reports/challenger_validation.*`,
 `models/public_demo/monitoring_reference.json`, `reports/monitoring_demo.*`, and
 `reports/validation_report.md`. `validation_report` consumes the earlier generated JSON files.
 The load command needs a running API but does not need the raw dataset; it prints aggregate timing
-and status counts only.
+and status counts only, and exits non-zero when requests fail.
 
 The fitted `models/public_demo/` bundle is versioned so the services run from a clean checkout;
 retraining requires the Kaggle data. For the containerised stack:
@@ -128,7 +130,8 @@ remains preferred and no model is promoted automatically.
 The frozen test-fold diagnostics include 1,000 deterministic stratified bootstrap intervals in the
 [public-demo audit](reports/public_demo_audit.json). The [monitoring demonstration](reports/monitoring_demo.md)
 uses deterministic replay and controlled stress transformations against a versioned aggregate
-reference. It is a reproducible simulation, not real production monitoring. The consolidated
+reference built from a disjoint held-out test window. It is a reproducible simulation, not real
+production monitoring. The consolidated
 [validation report](reports/validation_report.md) and [monitoring runbook](reports/monitoring_runbook.md)
 summarise the evidence and the controls a real lender would still need.
 

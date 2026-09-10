@@ -123,6 +123,8 @@ def build_monitoring_reference(
     threshold: float,
     model_version: str,
     y_true: np.ndarray | None = None,
+    *,
+    reference_scope: str = "unspecified",
 ) -> dict:
     """Build a serialisable aggregate reference without retaining application rows."""
     if X.empty or X.columns.duplicated().any():
@@ -159,8 +161,9 @@ def build_monitoring_reference(
         performance = _metric_dict(y_true, scores)
     score_edges = _numeric_edges(pd.Series(scores))
     return {
-        "schema_version": 1,
+        "schema_version": 2,
         "model_version": model_version,
+        "reference_scope": reference_scope,
         "row_count": len(X),
         "decision_threshold": threshold,
         "approval_rate": float((scores < threshold).mean()),

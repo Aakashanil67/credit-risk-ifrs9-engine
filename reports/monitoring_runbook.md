@@ -43,6 +43,7 @@ These are governance roles, not named people in this solo project.
 ## Evidence retained by this project
 
 The monitoring reference and replay reports retain only aggregate distributions and batch-level
-metrics. They do not retain applicant rows, predictions, targets, identifiers, payloads, or IP
-addresses. The replay and stress batches are simulations built from historical Home Credit data,
-not production observations.
+metrics. The reference window contains 51,503 held-out test rows in aggregate; each demonstration
+batch contains 10,000 disjoint replay rows. They do not retain applicant rows, predictions, targets,
+identifiers, payloads, or IP addresses. The replay and stress batches are simulations built from
+historical Home Credit data, not production observations.
