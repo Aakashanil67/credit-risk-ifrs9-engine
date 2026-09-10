@@ -39,9 +39,10 @@ def percentile(values: Sequence[float], quantile: float) -> float:
     return ordered[lower] + fraction * (ordered[upper] - ordered[lower])
 
 
-def summarise_results(results: Sequence[dict[str, float | int]]) -> dict[str, int | float | None]:
+def summarise_results(results: Sequence[dict[str, Any]]) -> dict[str, Any]:
     """Summarise status counts and successful-request latency without exposing payloads."""
     statuses = Counter(int(result["status"]) for result in results)
+    transport_errors = sum(bool(result.get("transport_error", False)) for result in results)
     success_latencies = [
         float(result["duration_ms"]) for result in results if result["status"] == 200
     ]
@@ -51,6 +52,7 @@ def summarise_results(results: Sequence[dict[str, float | int]]) -> dict[str, in
         "rate_limited": statuses[429],
         "client_errors": sum(count for status, count in statuses.items() if 400 <= status < 500),
         "server_errors": sum(count for status, count in statuses.items() if 500 <= status < 600),
+        "transport_errors": transport_errors,
         "p50_ms": None,
         "p95_ms": None,
         "p99_ms": None,
@@ -69,24 +71,43 @@ def summarise_results(results: Sequence[dict[str, float | int]]) -> dict[str, in
 
 async def run_load_test(
     url: str, requests: int, concurrency: int, timeout: float
-) -> tuple[list[dict[str, float | int]], float]:
+) -> tuple[list[dict[str, Any]], float]:
     """Run bounded concurrent POST requests and retain status plus elapsed time only."""
     semaphore = asyncio.Semaphore(concurrency)
 
-    async def send(client: httpx.AsyncClient) -> dict[str, float | int]:
+    async def send(client: httpx.AsyncClient) -> dict[str, Any]:
         async with semaphore:
             started_at = time.perf_counter()
             try:
                 response = await client.post(f"{url.rstrip('/')}/predict", json=VALID_APPLICANT)
-                status = response.status_code
+                return {
+                    "status": response.status_code,
+                    "transport_error": False,
+                    "duration_ms": (time.perf_counter() - started_at) * 1_000,
+                }
             except httpx.HTTPError:
-                status = 0
-            return {"status": status, "duration_ms": (time.perf_counter() - started_at) * 1_000}
+                return {
+                    "status": 0,
+                    "transport_error": True,
+                    "duration_ms": (time.perf_counter() - started_at) * 1_000,
+                }
 
     started_at = time.perf_counter()
     async with httpx.AsyncClient(timeout=timeout) as client:
         results = await asyncio.gather(*(send(client) for _ in range(requests)))
     return results, (time.perf_counter() - started_at) * 1_000
+
+
+def load_test_exit_code(summary: dict[str, Any], allow_rate_limits: bool) -> int:
+    accepted = int(summary["successes"])
+    if allow_rate_limits:
+        accepted += int(summary["rate_limited"])
+    failed = (
+        int(summary["transport_errors"]) > 0
+        or int(summary["server_errors"]) > 0
+        or accepted != int(summary["requests"])
+    )
+    return int(failed)
 
 
 def parse_args() -> argparse.Namespace:
@@ -108,7 +129,7 @@ def parse_args() -> argparse.Namespace:
     return args
 
 
-async def main() -> None:
+async def main() -> int:
     """Print a single aggregate JSON measurement for a deliberately small request batch."""
     args = parse_args()
     results, wall_time_ms = await run_load_test(
@@ -117,7 +138,8 @@ async def main() -> None:
     summary: dict[str, Any] = summarise_results(results)
     summary["wall_time_ms"] = wall_time_ms
     print(json.dumps(summary, sort_keys=True))
+    return load_test_exit_code(summary, args.allow_rate_limit_test)
 
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    raise SystemExit(asyncio.run(main()))
