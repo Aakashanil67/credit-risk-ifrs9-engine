@@ -5,6 +5,11 @@ trains a probability-of-default (PD) model, exposes a constrained public scoring
 FastAPI and Streamlit, returns SHAP-derived reason codes, and documents discounted,
 scenario-weighted expected-credit-loss (ECL) mechanics.
 
+This repository rebuilds an earlier credit-risk project I completed manually. I used modern coding
+assistants during the rebuild. The modelling choices, failed approaches, acceptance gates and
+remaining limits are recorded in [DECISIONS.md](DECISIONS.md), so the work can be reviewed on its
+evidence rather than an implied claim of unaided coding.
+
 Try the [dashboard](https://credit-risk-ifrs9-engine.streamlit.app) or inspect the
 [API documentation](https://credit-risk-api-92it.onrender.com/docs). The Render service uses a
 free instance and can take a short time to wake after inactivity.
