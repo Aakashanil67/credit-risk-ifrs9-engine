@@ -1,5 +1,7 @@
-"""Regenerate the offline fairness diagnostic for the served public-demo model."""
+"""Regenerate offline diagnostics for the served public-demo model."""
 
+import json
+from dataclasses import asdict
 from pathlib import Path
 
 import numpy as np
@@ -23,6 +25,11 @@ from src.fairness import calibration_parameters, group_fairness_metrics
 from src.features import build_lgbm_features
 from src.model_profiles import ModelProfile
 from src.preprocessing import split_data
+from src.uncertainty import (
+    MetricInterval,
+    bootstrap_binary_metric_intervals,
+    bootstrap_group_rate_difference,
+)
 
 
 def _markdown_table(report: pd.DataFrame) -> list[str]:
@@ -41,7 +48,11 @@ def _markdown_table(report: pd.DataFrame) -> list[str]:
 
 
 def write_fairness_audit(
-    gender_report: pd.DataFrame, age_report: pd.DataFrame, threshold: float, out_path: Path
+    gender_report: pd.DataFrame,
+    age_report: pd.DataFrame,
+    threshold: float,
+    gender_approval_gap: MetricInterval,
+    out_path: Path,
 ) -> None:
     """Write group diagnostics with the correct scope and explicit limits."""
     lines = [
@@ -60,6 +71,16 @@ def write_fairness_audit(
         "",
         *_markdown_table(age_report),
         "",
+        "## Gender approval-rate difference",
+        "",
+        "The estimate below is the female approval rate minus the male approval rate. Its 95% "
+        "stratified bootstrap interval uses "
+        f"{gender_approval_gap.n_bootstrap:,} deterministic resamples of this historical test fold.",
+        "",
+        f"- Estimate: **{gender_approval_gap.estimate:.2%}**",
+        f"- 95% stratified bootstrap interval: **{gender_approval_gap.lower:.2%} to "
+        f"{gender_approval_gap.upper:.2%}**",
+        "",
         "Differences in approval, error and calibration rates are signals for investigation, not "
         "proof of cause or fairness. Removing a direct gender feature does not rule out proxy "
         "effects. This is not a disparate-impact assessment, legal review, or production "
@@ -73,6 +94,7 @@ def write_threshold_analysis(
     metrics: ThresholdMetrics,
     calibration_intercept: float,
     calibration_slope: float,
+    metric_intervals: dict[str, MetricInterval],
     out_path: Path,
 ) -> None:
     """Record the observed test-fold effect of the illustrative threshold separately from policy."""
@@ -94,12 +116,52 @@ def write_threshold_analysis(
         f"- Calibration intercept: **{calibration_intercept:.4f}**; calibration slope: "
         f"**{calibration_slope:.4f}**.",
         "",
+        "## Test-fold model uncertainty",
+        "",
+        "Intervals are 95% stratified bootstrap intervals from the untouched historical test "
+        "fold; they quantify sampling uncertainty, not future portfolio performance.",
+        "",
+        "| metric | estimate | 95% stratified bootstrap interval |",
+        "|---|---:|---:|",
+        *[
+            f"| {name.replace('_', ' ')} | {interval.estimate:.4f} | "
+            f"{interval.lower:.4f} to {interval.upper:.4f} |"
+            for name, interval in metric_intervals.items()
+        ],
+        "",
         "The numbers describe one historical competition split and are not a lending policy, an "
         "approval recommendation, or evidence of profitability. A lender would estimate product "
         "pricing, capital, LGD, prepayment, collections, and constraints from its own portfolio "
         "before approving any threshold.",
     ]
     out_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+
+
+def write_public_demo_audit_json(
+    model_version: str,
+    test_rows: int,
+    metric_intervals: dict[str, MetricInterval],
+    threshold_metrics: ThresholdMetrics,
+    calibration_intercept: float,
+    calibration_slope: float,
+    gender_approval_gap: MetricInterval,
+    out_path: Path,
+) -> None:
+    """Write only aggregate audit diagnostics for downstream validation reporting."""
+    report = {
+        "model_version": model_version,
+        "test_rows": test_rows,
+        "seed": RANDOM_SEED,
+        "bootstrap_samples": gender_approval_gap.n_bootstrap,
+        "metric_intervals": {name: asdict(interval) for name, interval in metric_intervals.items()},
+        "threshold_metrics": asdict(threshold_metrics),
+        "calibration": {
+            "intercept": calibration_intercept,
+            "slope": calibration_slope,
+        },
+        "gender_approval_gap": asdict(gender_approval_gap),
+    }
+    out_path.write_text(json.dumps(report, indent=2, sort_keys=True) + "\n", encoding="utf-8")
 
 
 def _align_categories(X: pd.DataFrame, category_dtypes: dict) -> pd.DataFrame:
@@ -136,12 +198,25 @@ def main() -> None:
     age_report = group_fairness_metrics(
         test[TARGET_COL].to_numpy(), predictions, age_groups.to_numpy(), policy.threshold
     )
+    metric_intervals = bootstrap_binary_metric_intervals(
+        test[TARGET_COL].to_numpy(), predictions, n_bootstrap=1_000, seed=RANDOM_SEED
+    )
+    approved = predictions < policy.threshold
+    gender_approval_gap = bootstrap_group_rate_difference(
+        approved,
+        test["CODE_GENDER"].to_numpy(),
+        "F",
+        "M",
+        n_bootstrap=1_000,
+        seed=RANDOM_SEED,
+    )
 
     REPORTS_DIR.mkdir(parents=True, exist_ok=True)
     write_fairness_audit(
         gender_report,
         age_report,
         threshold=policy.threshold,
+        gender_approval_gap=gender_approval_gap,
         out_path=REPORTS_DIR / "fairness_audit.md",
     )
     operating_metrics = threshold_metrics(
@@ -154,7 +229,18 @@ def main() -> None:
         operating_metrics,
         calibration_intercept,
         calibration_slope,
+        metric_intervals,
         REPORTS_DIR / "threshold_analysis.md",
+    )
+    write_public_demo_audit_json(
+        model_version=bundle.metadata["model_version"],
+        test_rows=len(test),
+        metric_intervals=metric_intervals,
+        threshold_metrics=operating_metrics,
+        calibration_intercept=calibration_intercept,
+        calibration_slope=calibration_slope,
+        gender_approval_gap=gender_approval_gap,
+        out_path=REPORTS_DIR / "public_demo_audit.json",
     )
     print(f"wrote fairness_audit.md for {len(test):,} test rows")
 

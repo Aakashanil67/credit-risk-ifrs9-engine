@@ -15,6 +15,9 @@ import pandas as pd
 import shap
 import streamlit as st
 
+# Streamlit runs app code on a worker thread, so plotting must not use a desktop GUI backend.
+plt.switch_backend("Agg")
+
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from api.schemas import ApplicantRequest  # noqa: E402
@@ -228,7 +231,7 @@ if submitted:
             explanation = artifacts["explainer"](row)
             fig = plt.figure()
             shap.plots.waterfall(explanation[0], show=False, max_display=8)
-            st.pyplot(fig, bbox_inches="tight")
+            st.pyplot(fig)
             plt.close(fig)
         except FileNotFoundError:
             st.caption(

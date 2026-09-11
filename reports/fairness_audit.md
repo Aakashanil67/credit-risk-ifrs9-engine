@@ -20,4 +20,11 @@ This audit evaluates the 15-field public-demo LightGBM model on its untouched Ho
 | 55–64 | 12,050 | 5.34% | 5.50% | 0.0501 | 0.0017 | 99.27% | 2.02% | 0.66% |
 | 65+ | 1,603 | 3.49% | 3.96% | 0.0336 | 0.0048 | 100.00% | 0.00% | 0.00% |
 
+## Gender approval-rate difference
+
+The estimate below is the female approval rate minus the male approval rate. Its 95% stratified bootstrap interval uses 1,000 deterministic resamples of this historical test fold.
+
+- Estimate: **8.06%**
+- 95% stratified bootstrap interval: **7.49% to 8.64%**
+
 Differences in approval, error and calibration rates are signals for investigation, not proof of cause or fairness. Removing a direct gender feature does not rule out proxy effects. This is not a disparate-impact assessment, legal review, or production fairness-monitoring programme. A real assessment would require local applicants, realised outcomes, policy context, and governance review.
