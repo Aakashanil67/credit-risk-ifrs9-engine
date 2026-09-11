@@ -3,7 +3,7 @@ numpy==1.26.4
 scipy==1.13.1
 scikit-learn==1.5.2
 lightgbm==4.6.0
-shap==0.46.0
+shap==0.52.0
 matplotlib==3.9.2
 # Matplotlib 3.9 still calls pyparsing's camelCase API, deprecated in pyparsing 3.3.
 pyparsing==3.2.5
