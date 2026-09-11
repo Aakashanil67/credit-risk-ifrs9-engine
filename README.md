@@ -5,9 +5,26 @@ trains a probability-of-default (PD) model, exposes a constrained public scoring
 FastAPI and Streamlit, returns SHAP-derived reason codes, and documents discounted,
 scenario-weighted expected-credit-loss (ECL) mechanics.
 
+This repository rebuilds an earlier credit-risk project I completed manually. I used modern coding
+assistants during the rebuild. The modelling choices, failed approaches, acceptance gates and
+remaining limits are recorded in [DECISIONS.md](DECISIONS.md), so the work can be reviewed on its
+evidence rather than an implied claim of unaided coding.
+
 Try the [dashboard](https://credit-risk-ifrs9-engine.streamlit.app) or inspect the
 [API documentation](https://credit-risk-api-92it.onrender.com/docs). The Render service uses a
 free instance and can take a short time to wake after inactivity.
+
+```mermaid
+flowchart LR
+    A[Home Credit application data] --> B[Deterministic 60/20/20 split]
+    B --> C[Development-only CV and challengers]
+    B --> D[Frozen test evaluation]
+    C --> E[Versioned LightGBM bundle v1.2]
+    E --> F[FastAPI service v1.3]
+    E --> G[Streamlit dashboard]
+    E --> H[Aggregate monitoring reference]
+    H --> I[Replay and stress monitoring report]
+```
 
 ## What is deployed
 
@@ -45,6 +62,8 @@ and place it in `data/`; the raw competition data is intentionally excluded from
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
 pip install -r requirements.txt
+python scripts/check_environment.py
+python -m pip check
 
 python -m src.train_lgbm --profile public_demo
 python -m src.explain --profile public_demo
@@ -54,6 +73,35 @@ python -m src.ecl
 uvicorn api.main:app --reload
 streamlit run app/dashboard.py
 ```
+
+Run the checker from the activated environment. Model deserialisation depends on the pinned
+NumPy, pandas, scikit-learn and LightGBM versions; a globally installed package set is not a
+supported runtime.
+
+### Reproduce the v1.3 lifecycle evidence
+
+Run these commands after placing `application_train.csv` in `data/`. Challenger selection uses
+only the train-plus-validation development rows. After challenger selection and final evaluation,
+monitoring splits the frozen test fold into a 51,503-row reference window and a disjoint 10,000-row
+replay window; it is not a production feed.
+
+```powershell
+$py = ".\.venv\Scripts\python.exe"
+& $py -m src.challenger_validation
+& $py -m src.public_demo_audit
+& $py -m src.monitoring_demo
+& $py -m src.validation_report
+& $py scripts/load_test.py --url http://localhost:8000 --requests 15 --concurrency 3
+```
+
+The first four commands update `reports/challenger_validation.*`,
+`reports/public_demo_audit.json`, `reports/fairness_audit.md`, `reports/threshold_analysis.md`,
+`models/public_demo/monitoring_reference.json`, `reports/monitoring_demo.*`, and
+`reports/validation_report.md`. `validation_report` consumes the earlier generated JSON files.
+The load command needs a running API but does not need the raw dataset; it prints aggregate timing
+and status counts only. It exits non-zero on transport errors, unexpected HTTP responses,
+incomplete success counts or server errors. `--allow-rate-limit-test` accepts 429 responses only
+when the command is deliberately exercising the rate limit.
 
 The fitted `models/public_demo/` bundle is versioned so the services run from a clean checkout;
 retraining requires the Kaggle data. For the containerised stack:
@@ -84,6 +132,21 @@ policy. The threshold, fairness diagnostic, test-fold operating view, model limi
 engineering choices are documented in the [model card](reports/model_card.md),
 [fairness audit](reports/fairness_audit.md), [threshold analysis](reports/threshold_analysis.md),
 and [decisions log](DECISIONS.md).
+
+## Model lifecycle evidence
+
+The v1.3 service release adds validation and observability controls without replacing the fitted
+v1.2.0 LightGBM bundle. The development-only challenger study evaluated five candidates using
+out-of-fold development predictions. No candidate passed every predeclared gate, so the incumbent
+remains preferred and no model is promoted automatically.
+
+The frozen test-fold diagnostics include 1,000 deterministic stratified bootstrap intervals in the
+[public-demo audit](reports/public_demo_audit.json). The [monitoring demonstration](reports/monitoring_demo.md)
+uses deterministic replay and controlled stress transformations against a versioned aggregate
+reference built from a disjoint held-out test window. It is a reproducible simulation, not real
+production monitoring. The consolidated
+[validation report](reports/validation_report.md) and [monitoring runbook](reports/monitoring_runbook.md)
+summarise the evidence and the controls a real lender would still need.
 
 The public endpoint accepts at most 20 prediction requests per IP address per minute. Monetary
 inputs are bounded to the supported public contract: income up to 5,000,000, credit and goods
