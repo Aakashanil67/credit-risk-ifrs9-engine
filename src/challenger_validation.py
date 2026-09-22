@@ -1,4 +1,4 @@
-"""Development-only challenger evaluation for the frozen public-demo PD model."""
+"""Development-only challenger evaluation for the frozen public-demo risk model."""
 
 import json
 from pathlib import Path

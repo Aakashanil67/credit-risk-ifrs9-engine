@@ -45,8 +45,8 @@ fields. The API, dashboard, reports, and reason codes therefore say "dataset mon
 do not use a rand symbol.
 
 **The approval label is illustrative.** A 12% performing margin, 2% operating cost, 2% capital
-cost, and 45% LGD imply a PD threshold of 0.140351. The formula is visible in
-`src.decision_policy`; it is not a credit policy.
+cost, and 45% LGD imply a model-score threshold of 0.140351. The formula is visible in
+`src.decision_policy`; it is not a credit policy or evidence that the score is a 12-month PD.
 
 **Gender is audit-only.** The served model and request schema exclude `CODE_GENDER`. The offline
 fairness report uses it to surface group differences, not to declare the model fair or unfair.

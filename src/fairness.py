@@ -1,4 +1,4 @@
-"""Offline group diagnostics for the PD model."""
+"""Offline group diagnostics for the payment-difficulty risk model."""
 
 import numpy as np
 import pandas as pd

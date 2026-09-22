@@ -25,6 +25,14 @@ def _metric_interval_rows(intervals: dict[str, dict[str, float]]) -> list[str]:
     ]
 
 
+def _threshold_sensitivity_rows(rows: list[dict[str, float]]) -> list[str]:
+    return [
+        f"| {row['threshold']:.6f} | {row['approval_rate']:.2%} | {row['recall']:.2%} | "
+        f"{row['precision']:.2%} |"
+        for row in rows
+    ]
+
+
 def build_validation_report(
     metadata: dict[str, Any],
     audit: dict[str, Any],
@@ -36,6 +44,7 @@ def build_validation_report(
     test_metrics = _require(metadata, "test_metrics", "metadata")
     metric_intervals = _require(audit, "metric_intervals", "audit")
     gender_gap = _require(audit, "gender_approval_gap", "audit")
+    threshold_sensitivity = _require(audit, "threshold_sensitivity", "audit")
     data_scope = _require(challenger, "data_scope", "challenger")
     nomination = challenger.get("nomination")
     candidates = _require(challenger, "candidates", "challenger")
@@ -58,7 +67,7 @@ def build_validation_report(
     threshold_text = f"**{threshold:.6f}**" if threshold is not None else "not recorded"
 
     lines = [
-        "# Consolidated validation report: public-demo PD model",
+        "# Consolidated validation report: public-demo risk model",
         "",
         "## 1. Scope and validation status",
         "",
@@ -102,8 +111,9 @@ def build_validation_report(
         "## 6. Fairness diagnostic summary and limits",
         "",
         "The offline gender diagnostic estimates a female-minus-male approval-rate difference of "
-        f"**{gender_gap['estimate']:.2%}** (95% interval {gender_gap['lower']:.2%} to "
-        f"{gender_gap['upper']:.2%}). It is a screening diagnostic only: it does not establish "
+        f"**{100 * gender_gap['estimate']:.2f} percentage points** (95% interval "
+        f"{100 * gender_gap['lower']:.2f} to {100 * gender_gap['upper']:.2f} percentage points). "
+        "It is a screening diagnostic only: it does not establish "
         "fairness, disparate impact, causality, or legal compliance.",
         "",
         "## 7. Monitoring reference and stress results",
@@ -123,6 +133,12 @@ def build_validation_report(
         f"The illustrative expected-value threshold is {threshold_text}. It is not a lending policy "
         "or proof of profitability; "
         "a lender would need local pricing, LGD, capital, collections, and policy constraints.",
+        "The fixed operating points below are descriptive and were not used to reselect the "
+        "deployed threshold.",
+        "",
+        "| threshold | approval rate | event capture among declined | observed event rate among declined |",
+        "|---:|---:|---:|---:|",
+        *_threshold_sensitivity_rows(threshold_sensitivity),
         "",
         "## 9. Model limitations",
         "",

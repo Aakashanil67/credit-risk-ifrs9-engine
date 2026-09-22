@@ -4,7 +4,7 @@ from src.decision_policy import DecisionPolicy
 
 
 def test_expected_value_threshold_follows_the_margin_cost_and_lgd_assumptions():
-    """At the break-even PD, approving earns zero expected value before any behavioural response."""
+    """At the break-even event risk, approval has zero expected value before behaviour changes."""
     policy = DecisionPolicy(
         margin_rate=0.12, operating_cost_rate=0.02, capital_cost_rate=0.02, lgd=0.45
     )

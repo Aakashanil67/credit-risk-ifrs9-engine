@@ -80,12 +80,22 @@ class ApplicantRequest(BaseModel):
 class PredictResponse(BaseModel):
     model_config = ConfigDict(protected_namespaces=())
 
-    probability_of_default: float
+    probability_of_default: float = Field(
+        ...,
+        description=(
+            "Estimated probability of the Home Credit payment-difficulty target; the field name "
+            "is retained for API compatibility"
+        ),
+    )
     decision: Literal["approve", "decline"]
     decision_threshold: float
     reason_codes: list[str]
     expected_credit_loss: float = Field(
-        ..., description="Illustrative 12-month loss in dataset monetary units: PD x LGD x EAD"
+        ...,
+        description=(
+            "Illustrative loss in dataset monetary units: payment-difficulty score x assumed LGD "
+            "x requested credit; not an IFRS 9 provision"
+        ),
     )
     lgd_assumption: float
     expected_value: float = Field(

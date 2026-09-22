@@ -59,6 +59,8 @@ def reason_codes(shap_row: pd.Series, feature_row: pd.Series, top_n: int = 3) ->
             clause = f"{description} of {value}"
 
         verb = "raises" if shap_value > 0 else "lowers"
-        sentences.append(f"{clause[0].upper()}{clause[1:]} {verb} the estimated default risk.")
+        sentences.append(
+            f"{clause[0].upper()}{clause[1:]} {verb} the estimated payment-difficulty risk."
+        )
 
     return sentences

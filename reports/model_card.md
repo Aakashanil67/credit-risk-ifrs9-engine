@@ -1,11 +1,11 @@
-# Model card: public-demo PD model
+# Model card: public-demo payment-difficulty risk model
 
 ## Intended use
 
-This is an educational probability-of-default model for a consumer-loan application. The FastAPI
-service and Streamlit dashboard make its input contract, explanation path, and illustrative
-decision rule inspectable. It is not approved for lending, product pricing, collections,
-accounting, or automated adverse action.
+This is an educational binary risk model for the Home Credit payment-difficulty target. The
+FastAPI service and Streamlit dashboard make its input contract, explanation path, and
+illustrative decision rule inspectable. It is not approved for lending, product pricing,
+collections, accounting, or automated adverse action.
 
 ## Data and model contract
 
@@ -14,16 +14,16 @@ applications with 122 raw columns and an 8.1% event rate. `TARGET=1` denotes pay
 under the competition's definition; the public dataset does not disclose the exact delinquency-day
 threshold. The data is not South African and should not be treated as a local portfolio.
 
-The served contract has 15 application-time fields: contract type, age, employment tenure, income,
-credit amount, annuity, goods price, car and property ownership, household counts, education,
-income type, family status, and occupation. It excludes gender, external credit-bureau variables,
-organisation type, regional density, and car age. The dashboard exposes every required field and
-its categorical choices are constrained to the fitted category levels.
+The served contract has 15 application-time fields covering the applicant, household, loan and
+employment. It excludes gender and external credit-bureau variables. Organisation type, regional
+density and car age are also excluded. The dashboard exposes every required field and constrains
+its categorical choices to the fitted category levels.
 
 The endpoint rejects values outside its public contract before scoring. Income is limited to
-5,000,000, credit and goods price to 4,050,000, and annuity to 300,000 dataset monetary units;
-these limits prevent source-data outliers and malformed requests from producing misleading reason
-codes. It also allows at most 20 predictions per IP address per minute on the single-instance demo.
+5,000,000 and annuity to 300,000 dataset monetary units. Credit and goods price are each capped at
+4,050,000. These limits prevent source-data outliers and malformed requests from producing
+misleading reason codes. The single-instance demo also allows at most 20 predictions per IP
+address per minute.
 
 Data is split 60/20/20 with stratification and seed 42. Five-fold cross-validation on the training
 fold selects hyperparameters. Early stopping on validation chooses the tree count. The selected
@@ -50,8 +50,8 @@ The full test-fold uncertainty results are in the [public-demo audit](public_dem
 [validation report](validation_report.md). Intervals use 1,000 deterministic stratified bootstrap
 samples. They quantify uncertainty on this historical split, not future portfolio performance.
 
-At the illustrative threshold of 0.140351, the test-fold approval rate is 89.25%, default recall
-among declined applications is 25.86%, and observed default precision among declines is 19.42%.
+At the illustrative threshold of 0.140351, the test-fold approval rate is 89.25%. Declined cases
+capture 25.86% of observed payment-difficulty events, and their observed event rate is 19.42%.
 The calibration intercept is 0.1336 and slope is 1.0560. These are diagnostics, not operating
 targets; the full matrix and assumptions are in [threshold analysis](threshold_analysis.md).
 
@@ -66,21 +66,23 @@ Global SHAP plots and the calibration curve use a 3,000-row sample and the full 
 fold respectively. The final model is trained on train plus validation data, so using validation
 rows for those published artefacts would have made them in-sample diagnostics.
 
-The dashboard displays an illustrative 12-month loss estimate: `PD × 45% LGD × requested credit`.
-It is not an IFRS 9 provision. The separate ECL report adds stage assignment, survival-weighted
-monthly hazards, scenario weighting, and discounting on fixed accounts. It still lacks observed
-recoveries, contractual cash flows, and account-level PD history.
+The dashboard displays an illustrative loss calculation: `payment-difficulty risk score × 45% LGD
+× requested credit`. The target has no published time horizon, so this output is not a 12-month PD
+or an IFRS 9 provision. The separate ECL report uses assumed PD term structures to demonstrate
+stage assignment, survival-weighted monthly hazards, scenario weighting and discounting on fixed
+accounts. It still lacks observed recoveries, contractual cash flows and account-level PD history.
 
-## Fairness, governance, and monitoring
+## Fairness and governance
 
 Gender is kept only for an offline test-fold diagnostic and is absent from the served inputs. The
 fairness audit shows a gender approval-rate difference and differing group error rates under the
 illustrative threshold. Removing a direct feature does not remove proxy risk. This analysis is not
 a disparate-impact assessment, legal review, or production monitoring programme.
 
-A real deployment would need local outcome data, legal and policy review, independent validation,
-data-quality controls, reason-code governance, drift monitoring, retraining approval, and human
-oversight. None of those controls can be inferred from the Home Credit competition data.
+A real deployment would need local outcome data and independent validation. Legal and policy
+owners would have to review the decision design. Data-quality controls, reason-code governance,
+drift monitoring, retraining approval and human oversight would also be required. None of those
+controls can be inferred from the Home Credit competition data.
 
 ## Lifecycle controls
 

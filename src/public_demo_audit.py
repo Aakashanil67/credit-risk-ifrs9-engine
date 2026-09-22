@@ -34,7 +34,7 @@ from src.uncertainty import (
 
 def _markdown_table(report: pd.DataFrame) -> list[str]:
     lines = [
-        "| group | n | observed default rate | mean predicted PD | Brier | ECE (10 bins) | "
+        "| group | n | observed event rate | mean predicted risk | Brier | ECE (10 bins) | "
         "approval rate | TPR | FPR |",
         "|---|---:|---:|---:|---:|---:|---:|---:|---:|",
     ]
@@ -47,6 +47,15 @@ def _markdown_table(report: pd.DataFrame) -> list[str]:
     return lines
 
 
+def build_threshold_sensitivity(
+    y_true: np.ndarray,
+    scores: np.ndarray,
+    thresholds: tuple[float, ...],
+) -> list[ThresholdMetrics]:
+    """Calculate descriptive operating metrics at pre-specified thresholds."""
+    return [threshold_metrics(y_true, scores, threshold=value) for value in thresholds]
+
+
 def write_fairness_audit(
     gender_report: pd.DataFrame,
     age_report: pd.DataFrame,
@@ -56,7 +65,7 @@ def write_fairness_audit(
 ) -> None:
     """Write group diagnostics with the correct scope and explicit limits."""
     lines = [
-        "# Fairness audit: public-demo PD model",
+        "# Fairness audit: public-demo risk model",
         "",
         "This audit evaluates the 15-field public-demo LightGBM model on its untouched Home "
         "Credit test fold. `CODE_GENDER` is retained only for this offline diagnostic; it is not "
@@ -77,9 +86,14 @@ def write_fairness_audit(
         "stratified bootstrap interval uses "
         f"{gender_approval_gap.n_bootstrap:,} deterministic resamples of this historical test fold.",
         "",
-        f"- Estimate: **{gender_approval_gap.estimate:.2%}**",
-        f"- 95% stratified bootstrap interval: **{gender_approval_gap.lower:.2%} to "
-        f"{gender_approval_gap.upper:.2%}**",
+        f"- Estimate: **{100 * gender_approval_gap.estimate:.2f} percentage points**",
+        f"- 95% stratified bootstrap interval: **{100 * gender_approval_gap.lower:.2f} to "
+        f"{100 * gender_approval_gap.upper:.2f} percentage points**",
+        "",
+        "In this test fold, the gender groups differ in observed event mix, average model score, "
+        "approval rate, and error rates. Those differences are descriptive. They do not identify "
+        "whether the model, correlated input variables, the historical sample, or another factor "
+        "caused the gap.",
         "",
         "Differences in approval, error and calibration rates are signals for investigation, not "
         "proof of cause or fairness. Removing a direct gender feature does not rule out proxy "
@@ -92,6 +106,7 @@ def write_fairness_audit(
 
 def write_threshold_analysis(
     metrics: ThresholdMetrics,
+    sensitivity_metrics: list[ThresholdMetrics],
     calibration_intercept: float,
     calibration_slope: float,
     metric_intervals: dict[str, MetricInterval],
@@ -103,18 +118,32 @@ def write_threshold_analysis(
         "",
         "The service uses an illustrative expected-value threshold, not the population default "
         "rate: applications at or above the threshold are declined. With a 12% performing margin, "
-        "2% operating cost, 2% capital cost, and 45% LGD, the break-even PD is "
+        "2% operating cost, 2% capital cost, and 45% LGD, the illustrative break-even risk "
+        "threshold is "
         f"{metrics.threshold:.6f}.",
         "",
         "## Untouched test-fold operating view",
         "",
         f"- Approval rate: **{metrics.approval_rate:.2%}**",
-        f"- Default recall among declined applications: **{metrics.recall:.2%}**",
-        f"- Observed default precision among declined applications: **{metrics.precision:.2%}**",
+        f"- Payment-difficulty event capture among declined applications: **{metrics.recall:.2%}**",
+        f"- Observed event rate among declined applications: **{metrics.precision:.2%}**",
         f"- Confusion matrix (actual default positive): TP {metrics.true_positives:,}, FP "
         f"{metrics.false_positives:,}, TN {metrics.true_negatives:,}, FN {metrics.false_negatives:,}.",
         f"- Calibration intercept: **{calibration_intercept:.4f}**; calibration slope: "
         f"**{calibration_slope:.4f}**.",
+        "",
+        "## Fixed-threshold sensitivity",
+        "",
+        "These fixed operating points are descriptive. They were not searched to select or "
+        "change the deployed threshold.",
+        "",
+        "| threshold | approval rate | event capture among declined | observed event rate among declined |",
+        "|---:|---:|---:|---:|",
+        *[
+            f"| {row.threshold:.6f} | {row.approval_rate:.2%} | {row.recall:.2%} | "
+            f"{row.precision:.2%} |"
+            for row in sensitivity_metrics
+        ],
         "",
         "## Test-fold model uncertainty",
         "",
@@ -142,6 +171,7 @@ def write_public_demo_audit_json(
     test_rows: int,
     metric_intervals: dict[str, MetricInterval],
     threshold_metrics: ThresholdMetrics,
+    threshold_sensitivity: list[ThresholdMetrics],
     calibration_intercept: float,
     calibration_slope: float,
     gender_approval_gap: MetricInterval,
@@ -155,6 +185,7 @@ def write_public_demo_audit_json(
         "bootstrap_samples": gender_approval_gap.n_bootstrap,
         "metric_intervals": {name: asdict(interval) for name, interval in metric_intervals.items()},
         "threshold_metrics": asdict(threshold_metrics),
+        "threshold_sensitivity": [asdict(row) for row in threshold_sensitivity],
         "calibration": {
             "intercept": calibration_intercept,
             "slope": calibration_slope,
@@ -222,11 +253,17 @@ def main() -> None:
     operating_metrics = threshold_metrics(
         test[TARGET_COL].to_numpy(), predictions, threshold=policy.threshold
     )
+    sensitivity_metrics = build_threshold_sensitivity(
+        test[TARGET_COL].to_numpy(),
+        predictions,
+        thresholds=(0.10, policy.threshold, 0.18),
+    )
     calibration_intercept, calibration_slope = calibration_parameters(
         test[TARGET_COL].to_numpy(), predictions
     )
     write_threshold_analysis(
         operating_metrics,
+        sensitivity_metrics,
         calibration_intercept,
         calibration_slope,
         metric_intervals,
@@ -237,6 +274,7 @@ def main() -> None:
         test_rows=len(test),
         metric_intervals=metric_intervals,
         threshold_metrics=operating_metrics,
+        threshold_sensitivity=sensitivity_metrics,
         calibration_intercept=calibration_intercept,
         calibration_slope=calibration_slope,
         gender_approval_gap=gender_approval_gap,

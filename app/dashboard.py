@@ -60,13 +60,14 @@ def category_options(column: str, fallback: list[str]) -> list[str]:
 
 
 st.title("Credit Risk & IFRS 9 Engine")
-st.caption("Public-demo PD scoring, illustrative decisions, and explanation codes.")
+st.caption("Home Credit payment-difficulty risk, illustrative decisions, and explanation codes.")
 
 with st.sidebar:
     st.header("Model contract")
     st.caption(
-        f"The loss example uses the requested credit amount (`{DEFAULT_EAD_COL}`) as EAD and a fixed 45% LGD. "
-        "Amounts are dataset monetary units; the source dataset does not identify a currency."
+        f"The loss calculation uses the requested credit amount (`{DEFAULT_EAD_COL}`) as exposure "
+        "and assumes 45% LGD. The source target has no published time horizon, and the dataset "
+        "does not identify a currency."
     )
     st.divider()
     st.caption(f"API: `{API_URL}`")
@@ -193,26 +194,27 @@ if submitted:
         ax.axvline(result["decision_threshold"], color="black", linestyle="--", linewidth=1)
         ax.set_xlim(0, 1)
         ax.set_yticks([])
-        ax.set_xlabel("probability of default")
-        ax.set_title(f"PD = {pd_estimate:.1%}  (threshold {result['decision_threshold']:.0%})")
+        ax.set_xlabel("payment-difficulty probability")
+        ax.set_title(f"Risk = {pd_estimate:.1%}  (threshold {result['decision_threshold']:.0%})")
         st.pyplot(fig)
         plt.close(fig)
 
         if decision == "approve":
             st.success(
-                f"**APPROVE** — PD {pd_estimate:.1%} is below the {result['decision_threshold']:.0%} cutoff"
+                f"**APPROVE** — risk {pd_estimate:.1%} is below the {result['decision_threshold']:.0%} cutoff"
             )
         else:
             st.error(
-                f"**DECLINE** — PD {pd_estimate:.1%} is at or above the {result['decision_threshold']:.0%} cutoff"
+                f"**DECLINE** — risk {pd_estimate:.1%} is at or above the {result['decision_threshold']:.0%} cutoff"
             )
 
         st.metric(
-            "Illustrative 12-month loss estimate",
+            "Illustrative loss calculation",
             f"{result['expected_credit_loss']:,.2f} monetary units",
         )
         st.caption(
-            f"ECL = PD x LGD ({result['lgd_assumption']:.0%}) x credit amount ({credit_amount:,.0f} monetary units)"
+            f"Risk score x assumed LGD ({result['lgd_assumption']:.0%}) x requested credit "
+            f"({credit_amount:,.0f} monetary units). This is not an IFRS 9 provision."
         )
         st.metric("Illustrative expected value", f"{result['expected_value']:,.2f} monetary units")
         st.caption(

@@ -1,4 +1,6 @@
-from src.ecl import build_mechanics_examples, write_ifrs9_summary
+import pytest
+
+from src.ecl import build_mechanics_examples, build_stage_one_worked_example, write_ifrs9_summary
 
 
 def test_mechanics_examples_cover_each_ifrs9_stage() -> None:
@@ -33,3 +35,17 @@ def test_summary_labels_units_and_limits(tmp_path) -> None:
     assert "not a portfolio provision" in summary
     assert "(R)" not in summary
     assert "SICR" in summary
+
+
+def test_stage_one_worked_example_reconciles_scenarios_to_the_reported_total() -> None:
+    schedule, reconciliation = build_stage_one_worked_example()
+
+    assert set(schedule["scenario"]) == {"Upside", "Base", "Downside"}
+    assert schedule.groupby("scenario").size().to_dict() == {
+        "Base": 12,
+        "Downside": 12,
+        "Upside": 12,
+    }
+    assert reconciliation["weighted_loss"].sum() == pytest.approx(
+        build_mechanics_examples().iloc[0]["ecl"]
+    )

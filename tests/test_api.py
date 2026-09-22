@@ -56,6 +56,19 @@ def test_openapi_version_tracks_the_public_demo_release(client: TestClient) -> N
     assert client.get("/openapi.json").json()["info"]["version"] == "1.3.0"
 
 
+def test_openapi_describes_payment_difficulty_without_inventing_a_twelve_month_horizon(
+    client: TestClient,
+) -> None:
+    schema = client.get("/openapi.json").json()
+
+    assert "payment-difficulty risk" in schema["info"]["description"]
+    loss_description = schema["components"]["schemas"]["PredictResponse"]["properties"][
+        "expected_credit_loss"
+    ]["description"]
+    assert "payment-difficulty score" in loss_description
+    assert "12-month" not in loss_description
+
+
 def test_predict_returns_all_expected_fields(client: TestClient) -> None:
     response = client.post("/predict", json=VALID_APPLICANT)
     assert response.status_code == 200

@@ -22,6 +22,7 @@ def test_reason_codes_label_amounts_as_dataset_monetary_units() -> None:
     reason = reason_codes(shap_row, feature_row, top_n=1)[0]
 
     assert "450,000 monetary units" in reason
+    assert "payment-difficulty risk" in reason
 
 
 def test_reason_codes_use_singular_year_when_needed() -> None:

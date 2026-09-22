@@ -1,4 +1,4 @@
-"""Feature contract for the deployed public-demo PD model."""
+"""Feature contract for the deployed public-demo risk model."""
 
 from enum import StrEnum
 

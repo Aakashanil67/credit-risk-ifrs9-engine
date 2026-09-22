@@ -1,4 +1,4 @@
-"""Evaluation measures for frozen PD models."""
+"""Evaluation measures for frozen binary risk models."""
 
 from dataclasses import dataclass
 
@@ -51,7 +51,7 @@ def binary_metrics(y_true: np.ndarray, pd_score: np.ndarray) -> BinaryMetrics:
 def threshold_metrics(
     y_true: np.ndarray, pd_score: np.ndarray, threshold: float
 ) -> ThresholdMetrics:
-    """Report the operational effect of declining applicants at or above a PD threshold."""
+    """Report the effect of declining applicants at or above a risk-score threshold."""
     if not 0 < threshold < 1:
         raise ValueError("threshold must be strictly between 0 and 1")
 

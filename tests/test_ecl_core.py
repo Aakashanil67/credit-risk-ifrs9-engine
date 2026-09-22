@@ -1,6 +1,6 @@
 import pytest
 
-from src.ecl_core import ECLScenario, assign_stage, discounted_scenario_ecl
+from src.ecl_core import ECLScenario, assign_stage, discounted_scenario_ecl, scenario_ecl_schedule
 
 
 def test_stage_assignment_uses_credit_impairment_dpd_and_significant_pd_increase():
@@ -90,3 +90,33 @@ def test_scenario_weight_scales_the_expected_loss():
     monthly_pd = 1 - (1 - 0.10 * 1.30) ** (1 / 12)
     expected = 0.20 * monthly_pd * 0.55 * 100_000 / 1.15 ** (1 / 12)
     assert loss == pytest.approx(expected)
+
+
+def test_stage_one_schedule_reconciles_the_monthly_losses_to_the_ecl() -> None:
+    scenario = ECLScenario("Base", weight=0.60, pd_multiplier=1.0, lgd=0.45)
+
+    schedule = scenario_ecl_schedule(
+        stage=1,
+        pd_annual=0.04,
+        ead=100_000,
+        annual_eir=0.12,
+        remaining_months=48,
+        scenario=scenario,
+    )
+
+    monthly_hazard = 1 - (1 - 0.04) ** (1 / 12)
+    assert len(schedule) == 12
+    assert schedule[0].survival_at_start == pytest.approx(1.0)
+    assert schedule[0].marginal_default_probability == pytest.approx(monthly_hazard)
+    assert schedule[0].discount_factor == pytest.approx(1.12 ** (-1 / 12))
+    assert sum(period.weighted_loss for period in schedule) == pytest.approx(
+        discounted_scenario_ecl(1, 0.04, 100_000, 0.12, 48, scenario)
+    )
+
+
+def test_zero_exposure_produces_zero_loss_in_every_schedule_period() -> None:
+    scenario = ECLScenario("Base", weight=1.0, pd_multiplier=1.0, lgd=0.45)
+
+    schedule = scenario_ecl_schedule(1, 0.04, 0.0, 0.12, 48, scenario)
+
+    assert all(period.weighted_loss == 0 for period in schedule)

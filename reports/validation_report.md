@@ -1,4 +1,4 @@
-# Consolidated validation report: public-demo PD model
+# Consolidated validation report: public-demo risk model
 
 ## 1. Scope and validation status
 
@@ -41,7 +41,7 @@ Metadata records test AUC as **0.677370713463237**.
 
 ## 6. Fairness diagnostic summary and limits
 
-The offline gender diagnostic estimates a female-minus-male approval-rate difference of **8.06%** (95% interval 7.49% to 8.64%). It is a screening diagnostic only: it does not establish fairness, disparate impact, causality, or legal compliance.
+The offline gender diagnostic estimates a female-minus-male approval-rate difference of **8.06 percentage points** (95% interval 7.49 to 8.64 percentage points). It is a screening diagnostic only: it does not establish fairness, disparate impact, causality, or legal compliance.
 
 ## 7. Monitoring reference and stress results
 
@@ -60,6 +60,13 @@ The reference and replay windows are disjoint and both are out of sample relativ
 ## 8. Decision economics and threshold sensitivity limits
 
 The illustrative expected-value threshold is **0.140351**. It is not a lending policy or proof of profitability; a lender would need local pricing, LGD, capital, collections, and policy constraints.
+The fixed operating points below are descriptive and were not used to reselect the deployed threshold.
+
+| threshold | approval rate | event capture among declined | observed event rate among declined |
+|---:|---:|---:|---:|
+| 0.100000 | 75.78% | 46.59% | 15.53% |
+| 0.140351 | 89.25% | 25.86% | 19.42% |
+| 0.180000 | 94.85% | 14.76% | 23.14% |
 
 ## 9. Model limitations
 

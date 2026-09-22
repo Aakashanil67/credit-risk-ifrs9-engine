@@ -67,5 +67,37 @@
     "threshold": 0.14035087719298242,
     "true_negatives": 51210,
     "true_positives": 1284
-  }
+  },
+  "threshold_sensitivity": [
+    {
+      "approval_rate": 0.7577679137603044,
+      "false_negatives": 2652,
+      "false_positives": 12585,
+      "precision": 0.15525573902537254,
+      "recall": 0.46586102719033234,
+      "threshold": 0.1,
+      "true_negatives": 43953,
+      "true_positives": 2313
+    },
+    {
+      "approval_rate": 0.8924930491195552,
+      "false_negatives": 3681,
+      "false_positives": 5328,
+      "precision": 0.19419237749546278,
+      "recall": 0.25861027190332325,
+      "threshold": 0.14035087719298242,
+      "true_negatives": 51210,
+      "true_positives": 1284
+    },
+    {
+      "approval_rate": 0.9484903175454856,
+      "false_negatives": 4232,
+      "false_positives": 2435,
+      "precision": 0.23137626262626262,
+      "recall": 0.14763343403826787,
+      "threshold": 0.18,
+      "true_negatives": 54103,
+      "true_positives": 733
+    }
+  ]
 }

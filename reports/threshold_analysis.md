@@ -1,14 +1,24 @@
 # Decision threshold
 
-The service uses an illustrative expected-value threshold, not the population default rate: applications at or above the threshold are declined. With a 12% performing margin, 2% operating cost, 2% capital cost, and 45% LGD, the break-even PD is 0.140351.
+The service uses an illustrative expected-value threshold, not the population default rate: applications at or above the threshold are declined. With a 12% performing margin, 2% operating cost, 2% capital cost, and 45% LGD, the illustrative break-even risk threshold is 0.140351.
 
 ## Untouched test-fold operating view
 
 - Approval rate: **89.25%**
-- Default recall among declined applications: **25.86%**
-- Observed default precision among declined applications: **19.42%**
+- Payment-difficulty event capture among declined applications: **25.86%**
+- Observed event rate among declined applications: **19.42%**
 - Confusion matrix (actual default positive): TP 1,284, FP 5,328, TN 51,210, FN 3,681.
 - Calibration intercept: **0.1336**; calibration slope: **1.0560**.
+
+## Fixed-threshold sensitivity
+
+These fixed operating points are descriptive. They were not searched to select or change the deployed threshold.
+
+| threshold | approval rate | event capture among declined | observed event rate among declined |
+|---:|---:|---:|---:|
+| 0.100000 | 75.78% | 46.59% | 15.53% |
+| 0.140351 | 89.25% | 25.86% | 19.42% |
+| 0.180000 | 94.85% | 14.76% | 23.14% |
 
 ## Test-fold model uncertainty
 

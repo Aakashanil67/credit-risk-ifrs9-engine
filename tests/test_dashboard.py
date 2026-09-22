@@ -21,4 +21,6 @@ def test_local_fallback_scores_without_streamlit_warnings(monkeypatch) -> None:
     assert not app.exception
     assert not app.warning
     assert any("scoring directly against the saved model" in item.value for item in app.info)
-    assert any("PD " in item.value for item in app.success)
+    assert any("risk " in item.value for item in app.success)
+    assert any(item.label == "Illustrative loss calculation" for item in app.metric)
+    assert all("12-month" not in item.label for item in app.metric)
