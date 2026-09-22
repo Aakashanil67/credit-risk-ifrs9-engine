@@ -1,4 +1,4 @@
-# Fairness audit: public-demo PD model
+# Fairness audit: public-demo risk model
 
 This audit evaluates the 15-field public-demo LightGBM model on its untouched Home Credit test fold. `CODE_GENDER` is retained only for this offline diagnostic; it is not a model feature and the API does not accept it. The illustrative decision threshold is 0.140351: applications below it are approved.
 
@@ -24,7 +24,9 @@ This audit evaluates the 15-field public-demo LightGBM model on its untouched Ho
 
 The estimate below is the female approval rate minus the male approval rate. Its 95% stratified bootstrap interval uses 1,000 deterministic resamples of this historical test fold.
 
-- Estimate: **8.06%**
-- 95% stratified bootstrap interval: **7.49% to 8.64%**
+- Estimate: **8.06 percentage points**
+- 95% stratified bootstrap interval: **7.49 to 8.64 percentage points**
+
+In this test fold, the gender groups differ in observed event mix, average model score, approval rate, and error rates. Those differences are descriptive. They do not identify whether the model, correlated input variables, the historical sample, or another factor caused the gap.
 
 Differences in approval, error and calibration rates are signals for investigation, not proof of cause or fairness. Removing a direct gender feature does not rule out proxy effects. This is not a disparate-impact assessment, legal review, or production fairness-monitoring programme. A real assessment would require local applicants, realised outcomes, policy context, and governance review.

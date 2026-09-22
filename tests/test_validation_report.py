@@ -9,6 +9,10 @@ def _sources() -> tuple[dict, dict, dict, dict]:
         {
             "metric_intervals": {"auc": {"estimate": 0.67, "lower": 0.66, "upper": 0.68}},
             "gender_approval_gap": {"estimate": 0.08, "lower": 0.07, "upper": 0.09},
+            "threshold_sensitivity": [
+                {"threshold": 0.10, "approval_rate": 0.70, "recall": 0.50, "precision": 0.25},
+                {"threshold": 0.14, "approval_rate": 0.85, "recall": 0.30, "precision": 0.20},
+            ],
         },
         {"data_scope": "development_oof_only", "nomination": None, "candidates": []},
         {
@@ -31,6 +35,8 @@ def test_validation_report_separates_model_version_from_service_release() -> Non
     assert "Replay rows: **200**" in report
     assert "frozen_test_reference_window" in report
     assert "not an independent validation" in report.lower()
+    assert "8.00 percentage points" in report
+    assert "70.00%" in report
 
 
 @pytest.mark.parametrize(
