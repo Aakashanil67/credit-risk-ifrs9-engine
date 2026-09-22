@@ -1,4 +1,4 @@
-# Monitoring runbook: public-demo PD model
+# Monitoring runbook: public-demo risk model
 
 ## Purpose and boundary
 

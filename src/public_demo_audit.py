@@ -34,7 +34,7 @@ from src.uncertainty import (
 
 def _markdown_table(report: pd.DataFrame) -> list[str]:
     lines = [
-        "| group | n | observed default rate | mean predicted PD | Brier | ECE (10 bins) | "
+        "| group | n | observed event rate | mean predicted risk | Brier | ECE (10 bins) | "
         "approval rate | TPR | FPR |",
         "|---|---:|---:|---:|---:|---:|---:|---:|---:|",
     ]
@@ -125,8 +125,8 @@ def write_threshold_analysis(
         "## Untouched test-fold operating view",
         "",
         f"- Approval rate: **{metrics.approval_rate:.2%}**",
-        f"- Default recall among declined applications: **{metrics.recall:.2%}**",
-        f"- Observed default precision among declined applications: **{metrics.precision:.2%}**",
+        f"- Payment-difficulty event capture among declined applications: **{metrics.recall:.2%}**",
+        f"- Observed event rate among declined applications: **{metrics.precision:.2%}**",
         f"- Confusion matrix (actual default positive): TP {metrics.true_positives:,}, FP "
         f"{metrics.false_positives:,}, TN {metrics.true_negatives:,}, FN {metrics.false_negatives:,}.",
         f"- Calibration intercept: **{calibration_intercept:.4f}**; calibration slope: "

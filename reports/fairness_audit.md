@@ -4,14 +4,14 @@ This audit evaluates the 15-field public-demo LightGBM model on its untouched Ho
 
 ## Gender groups
 
-| group | n | observed default rate | mean predicted PD | Brier | ECE (10 bins) | approval rate | TPR | FPR |
+| group | n | observed event rate | mean predicted risk | Brier | ECE (10 bins) | approval rate | TPR | FPR |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|
 | F | 40,345 | 6.96% | 7.43% | 0.0630 | 0.0048 | 92.02% | 20.20% | 7.06% |
 | M | 21,158 | 10.20% | 9.18% | 0.0881 | 0.0102 | 83.96% | 33.23% | 14.08% |
 
 ## Age bands
 
-| group | n | observed default rate | mean predicted PD | Brier | ECE (10 bins) | approval rate | TPR | FPR |
+| group | n | observed event rate | mean predicted risk | Brier | ECE (10 bins) | approval rate | TPR | FPR |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|
 | 18–24 | 2,426 | 12.28% | 12.27% | 0.1049 | 0.0050 | 69.91% | 44.30% | 28.10% |
 | 25–34 | 14,380 | 10.53% | 10.55% | 0.0904 | 0.0062 | 77.86% | 42.14% | 19.79% |

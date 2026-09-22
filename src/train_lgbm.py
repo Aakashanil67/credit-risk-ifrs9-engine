@@ -1,4 +1,4 @@
-"""Train the public-demo LightGBM PD model and evaluate it against a like-for-like baseline.
+"""Train the public-demo LightGBM risk model and evaluate it against a like-for-like baseline.
 
 Two credit-industry metrics show up alongside AUC because that's what a risk team will actually
 ask for:
@@ -218,7 +218,7 @@ def write_comparison(
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Train a LightGBM PD model")
+    parser = argparse.ArgumentParser(description="Train a LightGBM payment-difficulty risk model")
     parser.add_argument(
         "--profile",
         choices=[ModelProfile.PUBLIC_DEMO.value],

@@ -5,8 +5,8 @@ The service uses an illustrative expected-value threshold, not the population de
 ## Untouched test-fold operating view
 
 - Approval rate: **89.25%**
-- Default recall among declined applications: **25.86%**
-- Observed default precision among declined applications: **19.42%**
+- Payment-difficulty event capture among declined applications: **25.86%**
+- Observed event rate among declined applications: **19.42%**
 - Confusion matrix (actual default positive): TP 1,284, FP 5,328, TN 51,210, FN 3,681.
 - Calibration intercept: **0.1336**; calibration slope: **1.0560**.
 
