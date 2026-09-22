@@ -11,8 +11,8 @@ from pathlib import Path
 import pandas as pd
 
 from src.config import REPORTS_DIR
-from src.ecl_core import assign_stage
-from src.ecl_demo import scenario_weighted_ecl
+from src.ecl_core import assign_stage, scenario_ecl_schedule
+from src.ecl_demo import DEFAULT_SCENARIOS, scenario_weighted_ecl
 
 _MECHANICS_INPUTS = (
     {
@@ -83,6 +83,46 @@ def build_mechanics_examples() -> pd.DataFrame:
     return pd.DataFrame(rows)
 
 
+def build_stage_one_worked_example() -> tuple[pd.DataFrame, pd.DataFrame]:
+    """Return the monthly schedule and scenario reconciliation for the performing account."""
+    account = _MECHANICS_INPUTS[0]
+    schedule_rows = []
+    reconciliation_rows = []
+    for scenario in DEFAULT_SCENARIOS:
+        periods = scenario_ecl_schedule(
+            stage=1,
+            pd_annual=account["pd_current"],
+            ead=account["ead"],
+            annual_eir=account["annual_eir"],
+            remaining_months=account["remaining_months"],
+            scenario=scenario,
+        )
+        adjusted_pd = min(account["pd_current"] * scenario.pd_multiplier, 1.0)
+        for period in periods:
+            schedule_rows.append(
+                {
+                    "scenario": scenario.name,
+                    "month": period.month,
+                    "survival_at_start": period.survival_at_start,
+                    "marginal_default_probability": period.marginal_default_probability,
+                    "discount_factor": period.discount_factor,
+                    "unweighted_loss": period.unweighted_loss,
+                    "weighted_loss": period.weighted_loss,
+                }
+            )
+        reconciliation_rows.append(
+            {
+                "scenario": scenario.name,
+                "weight": scenario.weight,
+                "adjusted_pd": adjusted_pd,
+                "lgd": scenario.lgd,
+                "unweighted_loss": sum(period.unweighted_loss for period in periods),
+                "weighted_loss": sum(period.weighted_loss for period in periods),
+            }
+        )
+    return pd.DataFrame(schedule_rows), pd.DataFrame(reconciliation_rows)
+
+
 def write_ifrs9_summary(examples: pd.DataFrame, out_path: Path) -> None:
     """Write the mechanics report without assigning a currency to source-dataset amounts."""
     lines = [
@@ -113,6 +153,46 @@ def write_ifrs9_summary(examples: pd.DataFrame, out_path: Path) -> None:
             f"{row.pd_current:.1%} | {row.ead:,.0f} | {row.remaining_months} | "
             f"{row.ecl:,.0f} | {row.coverage_pct:.2f}% |"
         )
+
+    schedule, reconciliation = build_stage_one_worked_example()
+    base_schedule = schedule.loc[schedule["scenario"] == "Base"]
+    lines += [
+        "",
+        "## Worked Stage 1 example",
+        "",
+        "The performing account starts with annual PD of 4%, EAD of 100,000 and an effective "
+        "interest rate of 12%. EAD is held constant because the source data has no contractual "
+        "repayment schedule. The base scenario uses 45% LGD and carries 60% of the final result.",
+        "",
+        "The base-scenario monthly calculation is shown in full. `Survival` is the probability "
+        "that the account reaches the start of the month without default. `Marginal PD` is the "
+        "probability of surviving to that month and defaulting during it.",
+        "",
+        "| month | survival | marginal PD | discount factor | discounted loss before weighting |",
+        "|---:|---:|---:|---:|---:|",
+    ]
+    for row in base_schedule.itertuples(index=False):
+        lines.append(
+            f"| {row.month} | {row.survival_at_start:.6f} | "
+            f"{row.marginal_default_probability:.6f} | {row.discount_factor:.6f} | "
+            f"{row.unweighted_loss:,.2f} |"
+        )
+
+    lines += [
+        "",
+        "The three scenario totals reconcile to the Stage 1 result above:",
+        "",
+        "| scenario | weight | adjusted annual PD | LGD | loss before weighting | weighted loss |",
+        "|---|---:|---:|---:|---:|---:|",
+    ]
+    for row in reconciliation.itertuples(index=False):
+        lines.append(
+            f"| {row.scenario} | {row.weight:.0%} | {row.adjusted_pd:.2%} | {row.lgd:.0%} | "
+            f"{row.unweighted_loss:,.2f} | {row.weighted_loss:,.2f} |"
+        )
+    lines.append(
+        f"| **Total** | **100%** |  |  |  | **{reconciliation['weighted_loss'].sum():,.2f}** |"
+    )
     lines += [
         "",
         "## Calculation method",
@@ -120,8 +200,12 @@ def write_ifrs9_summary(examples: pd.DataFrame, out_path: Path) -> None:
         "For Stages 1 and 2, annual PD is converted to a constant monthly hazard. Each month's "
         "loss uses the probability that the account has survived to that month and defaults during "
         "that month, multiplied by LGD and EAD, then discounted at the effective interest rate. "
-        "Stage 1 is capped at 12 months; Stage 2 runs over the remaining term. The result is "
+        "Stage 1 includes defaults arising in the next 12 months; Stage 2 runs over the remaining "
+        "term. The result is "
         "weighted across the stated upside, base, and downside scenarios (20% / 60% / 20%).",
+        "Because the example has no contractual cash-flow schedule, it recognises the assumed "
+        "loss at the default month. A production Stage 1 calculation would estimate lifetime cash "
+        "shortfalls associated with defaults that can occur during the next 12 months.",
         "",
         "For Stage 3, the demonstration treats the account as already in default and calculates "
         "the first discounted cash shortfall (LGD × EAD), rather than applying another stream of "
@@ -130,7 +214,9 @@ def write_ifrs9_summary(examples: pd.DataFrame, out_path: Path) -> None:
         "",
         "## What this does not model",
         "",
-        "The source data does not contain contractual amortisation schedules, account balances over "
+        "The 30- and 90-day arrears backstops, the two-times PD trigger and the 5% floor are policy "
+        "assumptions for this example, not calibrated SICR rules. The source data does not contain "
+        "contractual amortisation schedules, account balances over "
         "time, observed transitions between stages, recoveries, forward-looking macroeconomic "
         "variables, or a lender's approved SICR policy. Replacing those assumptions is necessary "
         "before using this method for accounting or credit decisions.",

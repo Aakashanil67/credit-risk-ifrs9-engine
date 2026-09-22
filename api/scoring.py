@@ -104,7 +104,8 @@ def score_applicant(
     shap_row = pd.Series(explanation.values[0], index=row.columns)
     codes = reason_codes(shap_row, row.iloc[0], top_n=3)
 
-    # This is an illustrative 12-month loss estimate, not a portfolio IFRS 9 calculation.
+    # The source target has no published time horizon. This multiplication is an illustrative loss
+    # calculation, not a 12-month PD or a portfolio IFRS 9 provision.
     ecl = pd_estimate * lgd * req.credit_amount
     metadata = artifacts["metadata"]
     return PredictResponse(

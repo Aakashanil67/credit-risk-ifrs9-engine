@@ -35,8 +35,8 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title="Credit Risk & IFRS 9 Engine",
     description=(
-        "Public-demo PD scoring, SHAP reason codes, and an illustrative 12-month loss estimate "
-        "for one loan applicant."
+        "Public-demo payment-difficulty risk scoring, SHAP reason codes, and an illustrative loss "
+        "calculation for one loan applicant."
     ),
     version=SERVICE_VERSION,
     lifespan=lifespan,

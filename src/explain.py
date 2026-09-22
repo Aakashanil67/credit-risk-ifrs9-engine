@@ -1,7 +1,7 @@
 """SHAP explainability: global feature importance and per-applicant reason codes.
 
 SHAP (SHapley Additive exPlanations) assigns each feature a contribution to one prediction —
-positive means it pushed the predicted default probability up, negative means it pushed it down —
+positive means it pushed the predicted payment-difficulty risk up, negative means it pushed it down —
 such that the contributions sum exactly to (prediction - average prediction). That additivity is
 what makes "top 3 SHAP drivers" a defensible sentence rather than a hand-wave: those three
 features really did account for most of the gap between this applicant's score and the average.
@@ -70,13 +70,12 @@ def save_current_shap_plot(out_path) -> None:
 
 
 def calibration_summary(y_true: pd.Series, y_pred: np.ndarray, n_bins: int = 10) -> dict:
-    """How well predicted PDs match observed default rates — separate question from discrimination.
+    """Compare predicted payment-difficulty risk with the observed event rate.
 
     AUC/Gini/KS measure whether the model *ranks* risky applicants above safe ones; calibration
-    measures whether a predicted PD of, say, 20% actually corresponds to roughly 20% of those
-    applicants defaulting. A model can rank perfectly (AUC 1.0) while being badly calibrated
-    (e.g. every prediction off by a constant factor) — IFRS 9 ECL depends on calibration, not
-    just ranking, because ECL = PD x LGD x EAD uses the raw PD value, not its rank.
+    measures whether a score of, say, 20% corresponds to an observed event rate near 20% in this
+    dataset. A model can rank perfectly (AUC 1.0) while its probability estimates remain badly
+    calibrated, for example when every estimate is off by a constant factor.
     """
     observed, predicted = calibration_curve(y_true, y_pred, n_bins=n_bins, strategy="quantile")
     brier = brier_score_loss(y_true, y_pred)
@@ -93,9 +92,9 @@ def plot_calibration_curve(calibration: dict, out_path) -> None:
         label=f"LightGBM (Brier={calibration['brier_score']:.4f})",
     )
     ax.plot([0, 1], [0, 1], linestyle="--", color="gray", label="perfectly calibrated")
-    ax.set_xlabel("predicted PD (bin mean)")
-    ax.set_ylabel("observed default rate (bin mean)")
-    ax.set_title("Calibration — predicted vs observed default rate")
+    ax.set_xlabel("predicted payment-difficulty risk (bin mean)")
+    ax.set_ylabel("observed event rate (bin mean)")
+    ax.set_title("Calibration — predicted risk vs observed event rate")
     ax.legend()
     fig.tight_layout()
     fig.savefig(out_path, dpi=120)
@@ -151,7 +150,7 @@ def main() -> None:
         save_current_shap_plot(FIGURES_DIR / f"{profile.value}_shap_waterfall_applicant_{rank}.png")
 
         codes = reason_codes(shap_row, feature_row)
-        print(f"applicant SK_ID_CURR={applicant_id} (PD={proba[row_idx]:.3f}):")
+        print(f"applicant SK_ID_CURR={applicant_id} (risk={proba[row_idx]:.3f}):")
         for code in codes:
             print(f"  - {code}")
 

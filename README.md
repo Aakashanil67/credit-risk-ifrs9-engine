@@ -1,43 +1,12 @@
-# Credit Risk & IFRS 9 Demonstrator
+# Credit Risk and IFRS 9 Demonstrator
 
-An end-to-end credit-risk modelling project built on Kaggle's Home Credit Default Risk data. It
-trains a probability-of-default (PD) model, exposes a constrained public scoring contract through
-FastAPI and Streamlit, returns SHAP-derived reason codes, and documents discounted,
-scenario-weighted expected-credit-loss (ECL) mechanics.
+A working credit-application risk service, built on the Home Credit competition data, with a deliberately separate IFRS 9 ECL mechanics example.
 
-This repository rebuilds an earlier credit-risk project I completed manually. I used modern coding
-assistants during the rebuild. The modelling choices, failed approaches, acceptance gates and
-remaining limits are recorded in [DECISIONS.md](DECISIONS.md), so the work can be reviewed on its
-evidence rather than an implied claim of unaided coding.
+[Live dashboard](https://credit-risk-ifrs9-engine.streamlit.app) · [API documentation](https://credit-risk-api-92it.onrender.com/docs) · [Model card](reports/model_card.md) · [Validation report](reports/validation_report.md)
 
-Try the [dashboard](https://credit-risk-ifrs9-engine.streamlit.app) or inspect the
-[API documentation](https://credit-risk-api-92it.onrender.com/docs). The Render service uses a
-free instance and can take a short time to wake after inactivity.
+## Result at a glance
 
-```mermaid
-flowchart LR
-    A[Home Credit application data] --> B[Deterministic 60/20/20 split]
-    B --> C[Development-only CV and challengers]
-    B --> D[Frozen test evaluation]
-    C --> E[Versioned LightGBM bundle v1.2]
-    E --> F[FastAPI service v1.3]
-    E --> G[Streamlit dashboard]
-    E --> H[Aggregate monitoring reference]
-    H --> I[Replay and stress monitoring report]
-```
-
-## What is deployed
-
-The public demo accepts 15 inputs an applicant can reasonably provide at application time: loan
-terms, income, employment, household details, housing and car ownership, education, income type,
-family status, and occupation. It excludes gender, credit-bureau variables, regional population
-density, employer type, and car age. That matters: the public form and fitted model use the same
-contract, rather than silently filling unavailable fields with missing values.
-
-The trained LightGBM model was selected by five-fold cross-validation on the training fold. A
-separate validation fold selected 193 trees through early stopping; the selected model was then
-refit on the combined train and validation data. The 61,503-row test fold was held back until the
-final evaluation.
+The deployed LightGBM model improved test AUC from **0.6563 to 0.6774** against a logistic-regression baseline using the same 15 inputs and data split. The gain is modest but consistent across the other ranking and probability metrics. I would treat it as evidence that non-linear relationships add value here, not as proof that the model is ready for lending decisions.
 
 | Metric | Logistic baseline | LightGBM |
 |---|---:|---:|
@@ -48,106 +17,63 @@ final evaluation.
 | PR-AUC | 0.1444 | 0.1612 |
 | Log loss | 0.2691 | 0.2652 |
 
-Both models use the same 15 fields, development data, and untouched test fold. The comparison is
-therefore a useful measure of the added value of the tree model, not a comparison between two
-different data privileges. Full details are in [the model comparison](reports/model_comparison.md).
+The published operating threshold is an illustrative break-even calculation, not a tuned lending policy. On the untouched 61,503-row test fold it approves 89.25% of applications and captures 25.86% of observed payment-difficulty events among declined cases. The [threshold analysis](reports/threshold_analysis.md) shows how that trade-off changes at two other fixed operating points.
 
-## Run locally
+![Credit risk dashboard](docs/images/dashboard.png)
 
-Use Python 3.12. Download `application_train.csv` from the
-[Home Credit Default Risk competition](https://www.kaggle.com/competitions/home-credit-default-risk)
-and place it in `data/`; the raw competition data is intentionally excluded from Git.
+## What the application does
 
-```powershell
-python -m venv .venv
-.\.venv\Scripts\Activate.ps1
-pip install -r requirements.txt
-python scripts/check_environment.py
-python -m pip check
+The Streamlit dashboard sends 15 applicant-provided fields to a FastAPI service. The service returns a payment-difficulty risk score, an illustrative approve/decline outcome, local SHAP reason codes, and a simple loss calculation based on the requested credit amount and an assumed 45% LGD. If the hosted API is unavailable, the dashboard can score with the same versioned model bundle locally.
 
-python -m src.train_lgbm --profile public_demo
-python -m src.explain --profile public_demo
-python -m src.public_demo_audit
-python -m src.ecl
+The public contract excludes gender, credit-bureau scores, regional population density, employer type and car age. The model was fitted on that exact public feature set; the service does not quietly replace unavailable bureau data with missing values.
 
-uvicorn api.main:app --reload
-streamlit run app/dashboard.py
+```mermaid
+flowchart LR
+    A[Home Credit applications] --> B[Deterministic 60/20/20 split]
+    B --> C[Development-only selection]
+    B --> D[Untouched test evaluation]
+    C --> E[Versioned LightGBM bundle]
+    E --> F[FastAPI]
+    E --> G[Streamlit]
+    D --> H[Validation and monitoring reports]
 ```
 
-Run the checker from the activated environment. Model deserialisation depends on the pinned
-NumPy, pandas, scikit-learn and LightGBM versions; a globally installed package set is not a
-supported runtime.
+The main engineering and modelling choices are intentional:
 
-### Reproduce the v1.3 lifecycle evidence
+- The training and serving schemas match. Persisted categorical levels prevent training/serving drift.
+- Challenger selection uses development-only out-of-fold predictions. The test fold is not used to choose a model or threshold.
+- Gender is absent from the model and API, but retained offline for group diagnostics. The observed approval-rate gap is reported in percentage points with a bootstrap interval; it is not presented as a causal or legal fairness finding.
+- SHAP reason codes explain model behaviour. They are not causal findings or production adverse-action notices.
+- The fitted bundle is committed and baked into both Docker images, so a clean checkout can run without redistributing the Kaggle data.
 
-Run these commands after placing `application_train.csv` in `data/`. Challenger selection uses
-only the train-plus-validation development rows. After challenger selection and final evaluation,
-monitoring splits the frozen test fold into a 51,503-row reference window and a disjoint 10,000-row
-replay window; it is not a production feed.
+The [decisions log](DECISIONS.md) records rejected approaches and trade-offs. Supporting evidence includes the [model comparison](reports/model_comparison.md), [fairness audit](reports/fairness_audit.md), [monitoring demonstration](reports/monitoring_demo.md), and [consolidated validation report](reports/validation_report.md).
 
-```powershell
-$py = ".\.venv\Scripts\python.exe"
-& $py -m src.challenger_validation
-& $py -m src.public_demo_audit
-& $py -m src.monitoring_demo
-& $py -m src.validation_report
-& $py scripts/load_test.py --url http://localhost:8000 --requests 15 --concurrency 3
-```
+## Run it locally
 
-The first four commands update `reports/challenger_validation.*`,
-`reports/public_demo_audit.json`, `reports/fairness_audit.md`, `reports/threshold_analysis.md`,
-`models/public_demo/monitoring_reference.json`, `reports/monitoring_demo.*`, and
-`reports/validation_report.md`. `validation_report` consumes the earlier generated JSON files.
-The load command needs a running API but does not need the raw dataset; it prints aggregate timing
-and status counts only. It exits non-zero on transport errors, unexpected HTTP responses,
-incomplete success counts or server errors. `--allow-rate-limit-test` accepts 429 responses only
-when the command is deliberately exercising the rate limit.
-
-The fitted `models/public_demo/` bundle is versioned so the services run from a clean checkout;
-retraining requires the Kaggle data. For the containerised stack:
+The quickest route does not retrain the model and does not require the Kaggle dataset:
 
 ```powershell
+git clone https://github.com/Aakashanil67/credit-risk-ifrs9-engine.git
+cd credit-risk-ifrs9-engine
 docker compose up --build
 ```
 
-The API is then available at `http://localhost:8000/docs` and the dashboard at
-`http://localhost:8501`. Run `pytest -q` for tests and `ruff check .` plus
-`ruff format --check .` for static checks.
+Open `http://localhost:8501` for the dashboard or `http://localhost:8000/docs` for the API. Stop the stack with `docker compose down`.
 
-## Scope and limits
+For a Python 3.12 environment, full model rebuild, report regeneration and test commands, follow [the reproduction guide](docs/reproduction.md). Raw Home Credit files are deliberately excluded from Git.
 
-Home Credit is a historical competition dataset, not a South African lending portfolio. It has no
-contractual amortisation schedules, observed recoveries, account-level risk migration, local
-pricing, or production outcome-monitoring feed. Amounts are consequently described as **dataset
-monetary units** rather than a named currency. The API's loss figure is a simple illustrative
-12-month `PD × LGD × EAD` calculation; it is not an IFRS 9 provision.
+## IFRS 9 scope
 
-The separate [ECL mechanics report](reports/ifrs9_summary.md) shows Stage 1, Stage 2, and Stage 3
-examples using survival-weighted monthly default hazards, discounting, and stated upside/base/
-downside scenarios. It is deliberately a mechanics demonstration, not a synthetic portfolio
-provision.
+The model estimates the dataset's binary payment-difficulty outcome. The dataset does not publish a 12-month default horizon, so the score is not labelled as a 12-month PD.
 
-The dashboard's approve/decline label comes from exposed illustrative economics, not a lender's
-policy. The threshold, fairness diagnostic, test-fold operating view, model limitations, and
-engineering choices are documented in the [model card](reports/model_card.md),
-[fairness audit](reports/fairness_audit.md), [threshold analysis](reports/threshold_analysis.md),
-and [decisions log](DECISIONS.md).
+The separate [ECL mechanics report](reports/ifrs9_summary.md) demonstrates Stage 1, Stage 2 and Stage 3 calculations with assumed PD term structures and survival-weighted monthly default hazards. It applies discount factors to stated upside, base and downside scenarios. Its worked Stage 1 example reconciles month by month to **1,796.08 dataset monetary units**. It shows the mechanics; it is not an accounting provision or a substitute for portfolio-specific estimates and governance across PD, LGD, EAD and staging.
 
-## Model lifecycle evidence
+## Limits
 
-The v1.3 service release adds validation and observability controls without replacing the fitted
-v1.2.0 LightGBM bundle. The development-only challenger study evaluated five candidates using
-out-of-fold development predictions. No candidate passed every predeclared gate, so the incumbent
-remains preferred and no model is promoted automatically.
+Home Credit is historical competition data, not a South African lending portfolio. There is no out-of-time validation, local affordability policy, observed recovery history, contractual amortisation schedule or live outcome feed. Monetary amounts are therefore described as dataset monetary units. The monitoring runs are controlled replays and stresses, not production observations. A real deployment would still require local data and independent validation, followed by formal review from legal and policy owners. Security controls, outcome monitoring and model governance would also need to be established.
 
-The frozen test-fold diagnostics include 1,000 deterministic stratified bootstrap intervals in the
-[public-demo audit](reports/public_demo_audit.json). The [monitoring demonstration](reports/monitoring_demo.md)
-uses deterministic replay and controlled stress transformations against a versioned aggregate
-reference built from a disjoint held-out test window. It is a reproducible simulation, not real
-production monitoring. The consolidated
-[validation report](reports/validation_report.md) and [monitoring runbook](reports/monitoring_runbook.md)
-summarise the evidence and the controls a real lender would still need.
+The hosted services use free tiers and may take a short time to wake after inactivity.
 
-The public endpoint accepts at most 20 prediction requests per IP address per minute. Monetary
-inputs are bounded to the supported public contract: income up to 5,000,000, credit and goods
-price up to 4,050,000, and annuity up to 300,000 dataset monetary units.
+## Project context
+
+This is a rebuild of a credit-risk project I previously completed manually. I used coding assistants during the rebuild for implementation and review. The modelling decisions, tests, failed approaches and limitations are documented so the work can be assessed on the evidence rather than on an implied claim of unaided coding.
