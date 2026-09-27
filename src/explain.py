@@ -1,10 +1,8 @@
-"""SHAP explainability: global feature importance and per-applicant reason codes.
+"""Global SHAP importance and per-applicant reason codes.
 
-SHAP (SHapley Additive exPlanations) assigns each feature a contribution to one prediction —
-positive means it pushed the predicted payment-difficulty risk up, negative means it pushed it down —
-such that the contributions sum exactly to (prediction - average prediction). That additivity is
-what makes "top 3 SHAP drivers" a defensible sentence rather than a hand-wave: those three
-features really did account for most of the gap between this applicant's score and the average.
+Tree SHAP values here add to LightGBM's raw margin (log-odds), not to its predicted probability.
+A positive contribution raises the probability because the logistic transform is monotonic.
+Reason codes name the largest absolute contributions; they do not establish causation.
 """
 
 import argparse

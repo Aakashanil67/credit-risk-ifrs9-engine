@@ -24,3 +24,22 @@ def test_local_fallback_scores_without_streamlit_warnings(monkeypatch) -> None:
     assert any("risk " in item.value for item in app.success)
     assert any(item.label == "Illustrative loss calculation" for item in app.metric)
     assert all("12-month" not in item.label for item in app.metric)
+
+
+def test_expected_value_explains_assumed_margin_and_costs(monkeypatch) -> None:
+    monkeypatch.setenv("API_URL", "http://127.0.0.1:9")
+    app = AppTest.from_file(DASHBOARD).run(timeout=30)
+
+    app.button[0].click().run(timeout=30)
+
+    assert not app.exception
+    captions = [item.value for item in app.get("caption")]
+    assert any(
+        "Expected value = requested credit" in caption
+        and "12%" in caption
+        and "45%" in caption
+        and "2% operating cost" in caption
+        and "2% capital cost" in caption
+        and "assumed" in caption
+        for caption in captions
+    )

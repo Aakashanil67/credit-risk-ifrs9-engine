@@ -22,7 +22,13 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from api.schemas import ApplicantRequest  # noqa: E402
 from api.scoring import applicant_to_row, load_artifacts, score_applicant  # noqa: E402
-from src.config import DEFAULT_EAD_COL  # noqa: E402
+from src.config import (  # noqa: E402
+    CAPITAL_COST_RATE,
+    DEFAULT_EAD_COL,
+    DEFAULT_LGD,
+    OPERATING_COST_RATE,
+    PERFORMING_MARGIN_RATE,
+)
 
 API_URL = os.environ.get("API_URL", "http://localhost:8000")
 API_TIMEOUT_SECONDS = 10.0
@@ -217,6 +223,14 @@ if submitted:
             f"({credit_amount:,.0f} monetary units). This is not an IFRS 9 provision."
         )
         st.metric("Illustrative expected value", f"{result['expected_value']:,.2f} monetary units")
+        st.caption(
+            "Expected value = requested credit × "
+            f"[(1 − risk) × {PERFORMING_MARGIN_RATE:.0%} margin "
+            f"− risk × {DEFAULT_LGD:.0%} LGD "
+            f"− {OPERATING_COST_RATE:.0%} operating cost "
+            f"− {CAPITAL_COST_RATE:.0%} capital cost]. "
+            "These are assumed rates, not observed lender economics."
+        )
         st.caption(
             f"{result['model_name']} v{result['model_version']} · {result['model_profile']} profile"
         )
