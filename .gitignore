@@ -37,7 +37,7 @@ Thumbs.db
 # Editor and tool state live in ~/.gitignore_global, not here — they're a property of
 # my machine, not of this project, and every contributor would need a different set.
 
-# personal planning docs, not part of the shipped project
+# local drafts and exports, not part of the shipped project
 *.pdf
-Project 1 - AUTOPILOT - Credit Risk & IFRS 9 Engine.md
+*.local-untracked-*
 .worktrees/
