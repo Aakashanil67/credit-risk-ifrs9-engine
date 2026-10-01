@@ -1,6 +1,6 @@
 # Fairness audit: public-demo risk model
 
-This audit evaluates the 15-field public-demo LightGBM model on its untouched Home Credit test fold. `CODE_GENDER` is retained only for this offline diagnostic; it is not a model feature and the API does not accept it. The illustrative decision threshold is 0.140351: applications below it are approved.
+This audit evaluates the 15-field public-demo LightGBM model on its untouched Home Credit test fold. `CODE_GENDER` is retained only for this offline diagnostic. It is not a model feature, and the API does not accept it. The illustrative decision threshold is 0.140351: applications below it are approved.
 
 ## Gender groups
 

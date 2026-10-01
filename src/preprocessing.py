@@ -1,7 +1,7 @@
 """Leakage-safe split and imputation.
 
 Split before imputing, always. If you impute first and split second, the median/mode used to
-fill a training row was computed partly from validation and test rows — the model has seen a
+fill a training row was computed partly from validation and test rows. The model has then seen a
 statistic derived from data it's supposed to be evaluated against. Splitting first and fitting
 the imputer on the training fold only keeps validation and test genuinely unseen.
 """

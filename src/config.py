@@ -32,7 +32,7 @@ TRAIN_FRACTION = 0.6
 VAL_FRACTION = 0.2
 TEST_FRACTION = 0.2
 
-# IFRS 9 default assumptions — overridable per call, not hardcoded into the ECL math itself
+# IFRS 9 default assumptions. Callers can override them; they are not hardcoded into the ECL maths.
 DEFAULT_LGD = 0.45
 DECISION_THRESHOLD = (PERFORMING_MARGIN_RATE - OPERATING_COST_RATE - CAPITAL_COST_RATE) / (
     PERFORMING_MARGIN_RATE + DEFAULT_LGD

@@ -46,7 +46,7 @@ do not use a rand symbol.
 
 **The approval label is illustrative.** A 12% performing margin, 2% operating cost, 2% capital
 cost, and 45% LGD imply a model-score threshold of 0.140351. The formula is visible in
-`src.decision_policy`; it is not a credit policy or evidence that the score is a 12-month PD.
+`src.decision_policy`. It is not a credit policy or evidence that the score is a 12-month PD.
 
 **Gender is audit-only.** The served model and request schema exclude `CODE_GENDER`. The offline
 fairness report uses it to surface group differences, not to declare the model fair or unfair.
@@ -64,7 +64,7 @@ v1.2.0 bundle remains the deployed artifact.
 **Monitoring references are aggregate, out of sample, and thresholds are configurable.** After
 challenger selection, the frozen test fold is split into a 51,503-row reference window and a
 disjoint 10,000-row replay window. The reference stores feature-bin proportions, category
-proportions, missingness, score distribution, approval rate and held-out performance metrics; it
+proportions, missingness, score distribution, approval rate and held-out performance metrics. It
 stores no applicant rows or identifiers. PSI amber/red cutoffs of 0.10 and 0.25 are illustrative
 controls, not universal lending-policy limits.
 
@@ -76,7 +76,7 @@ addresses, query strings, predictions, and explanation text are not logged.
 
 **A Docker mount hid a deployment defect.** Local Compose mounted `models/` over `/app/models`,
 so the first standalone Render image lacked model artifacts. Both Dockerfiles now copy versioned
-bundles into the image; Compose's mount is only a local-development override.
+bundles into the image. Compose's mount is only a local-development override.
 
 **The first Streamlit dependency set was broader than its runtime path.** Training-only packages
 pulled an incompatible solver stack into Streamlit Cloud. The dashboard has a lean
@@ -94,7 +94,7 @@ of survival to that month. Stage 3 is explicitly a simplified first discounted c
 ## Remaining limits
 
 - There is no out-of-time validation, local outcome data, scheduled production feed, or scheduled retraining.
-- The data lacks recoveries, amortisation schedules, and observed risk migration; ECL remains a
-  mechanics demonstration.
+- The data lacks recoveries, amortisation schedules, and observed risk migration, so ECL
+  remains a mechanics demonstration.
 - The illustrative decision economics have no lender pricing or capital calibration.
 - The fairness diagnostic is descriptive and cannot replace legal, policy, or governance review.

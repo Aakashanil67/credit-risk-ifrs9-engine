@@ -2,7 +2,7 @@
 
 ## Why accuracy is the wrong metric
 
-8.1% of applicants had a recorded payment difficulty event. The competition does not disclose the exact delinquency threshold, so this project does not treat the target as a legally defined default. A model that predicts 'repaid' for every single applicant hits 91.9% accuracy while identifying none of those events. AUC, precision-recall, and the KS statistic (computed later against LightGBM) all separate the classes; accuracy collapses them.
+8.1% of applicants had a recorded payment difficulty event. The competition does not disclose the exact delinquency threshold, so this project does not treat the target as a legally defined default. A model that predicts 'repaid' for every single applicant hits 91.9% accuracy while identifying none of those events. AUC, precision-recall, and the KS statistic (computed later against LightGBM) all separate the classes. Accuracy collapses them.
 
 ## Five findings
 
@@ -12,7 +12,7 @@
 
 3. **The three `EXT_SOURCE_*` columns dominate the correlation table.** EXT_SOURCE_3 correlates -0.179 with `TARGET`, more than any other raw feature in this table. They are external credit-bureau scores. The deployed public-demo model deliberately excludes them because an applicant cannot supply them.
 
-4. **Income and credit amount are heavily right-skewed.** A handful of applicants report incomes in the tens of millions; the histograms clip at the 99th percentile so the bulk of the distribution is visible at all. The tree model uses the raw values; the logistic baseline standardises its numeric inputs.
+4. **Income and credit amount are heavily right-skewed.** A handful of applicants report incomes in the tens of millions. The histograms clip at the 99th percentile so most of the distribution can be seen. The tree model uses the raw values. The logistic baseline standardises its numeric inputs.
 
 5. **`DAYS_BIRTH` correlates 0.078 with `TARGET`.** Younger applicants default more often, which is consistent with having less credit history to underwrite against. It is not a causal age effect and shouldn't be read as one.
 

@@ -59,7 +59,7 @@ def validate_shap_additivity(model, X: pd.DataFrame, explanation: shap.Explanati
 
 
 def save_current_shap_plot(out_path) -> None:
-    """Call right after a shap.plots.* call — each one draws on the current pyplot figure, so
+    """Call right after a shap.plots.* call. Each one draws on the current pyplot figure, so
     starting a fresh figure before every plot (not just once) keeps them from overlaying."""
     fig = plt.gcf()
     fig.tight_layout()
@@ -92,7 +92,7 @@ def plot_calibration_curve(calibration: dict, out_path) -> None:
     ax.plot([0, 1], [0, 1], linestyle="--", color="gray", label="perfectly calibrated")
     ax.set_xlabel("predicted payment-difficulty risk (bin mean)")
     ax.set_ylabel("observed event rate (bin mean)")
-    ax.set_title("Calibration — predicted risk vs observed event rate")
+    ax.set_title("Calibration: predicted risk vs observed event rate")
     ax.legend()
     fig.tight_layout()
     fig.savefig(out_path, dpi=120)

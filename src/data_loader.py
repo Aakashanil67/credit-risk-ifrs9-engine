@@ -10,7 +10,7 @@ from src.config import RAW_TRAIN_PATH, REPORTS_DIR, TARGET_COL
 def load_application_data(path: Path = RAW_TRAIN_PATH) -> pd.DataFrame:
     if not path.exists():
         raise FileNotFoundError(
-            f"{path} not found — download application_train.csv from the Kaggle "
+            f"{path} not found. To fix this, download application_train.csv from the Kaggle "
             "Home Credit Default Risk competition and place it in data/."
         )
     return pd.read_csv(path)
@@ -34,7 +34,7 @@ def write_data_dictionary(df: pd.DataFrame, missing: pd.DataFrame, out_path: Pat
     lines = [
         "# Data dictionary: application_train.csv",
         "",
-        f"{df.shape[0]:,} rows, {df.shape[1]} columns. One row is one loan application; "
+        f"{df.shape[0]:,} rows, {df.shape[1]} columns. One row is one loan application. "
         f"`{TARGET_COL}` is 1 when the competition marks an applicant as having payment "
         "difficulty, 0 otherwise. Home Credit intentionally withholds the exact delinquency-day "
         "threshold in the public data, so this project does not invent one.",

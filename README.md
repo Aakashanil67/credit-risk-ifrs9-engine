@@ -25,7 +25,7 @@ The published operating threshold is an illustrative break-even calculation, not
 
 The Streamlit dashboard sends 15 applicant-provided fields to a FastAPI service. The service returns a payment-difficulty risk score, an illustrative approve/decline outcome, local SHAP reason codes, and a simple loss calculation based on the requested credit amount and an assumed 45% LGD. If the hosted API is unavailable, the dashboard can score with the same versioned model bundle locally.
 
-The public contract excludes gender, credit-bureau scores, regional population density, employer type and car age. The model was fitted on that exact public feature set; the service does not quietly replace unavailable bureau data with missing values.
+The public contract excludes gender, credit-bureau scores, regional population density, employer type and car age. The model was fitted on that exact public feature set. The service does not quietly replace unavailable bureau data with missing values.
 
 ```mermaid
 flowchart LR
@@ -42,7 +42,7 @@ The main engineering and modelling choices are intentional:
 
 - The training and serving schemas match. Persisted categorical levels prevent training/serving drift.
 - Challenger selection uses development-only out-of-fold predictions. The test fold is not used to choose a model or threshold.
-- Gender is absent from the model and API, but retained offline for group diagnostics. The observed approval-rate gap is reported in percentage points with a bootstrap interval; it is not presented as a causal or legal fairness finding.
+- Gender is absent from the model and API, but retained offline for group diagnostics. The observed approval-rate gap is reported in percentage points with a bootstrap interval. It is not presented as a causal or legal fairness finding.
 - SHAP reason codes explain model behaviour. They are not causal findings or production adverse-action notices.
 - The fitted bundle is committed and baked into both Docker images, so a clean checkout can run without redistributing the Kaggle data.
 
@@ -66,7 +66,7 @@ For a Python 3.12 environment, full model rebuild, report regeneration and test 
 
 The model estimates the dataset's binary payment-difficulty outcome. The dataset does not publish a 12-month default horizon, so the score is not labelled as a 12-month PD.
 
-The separate [ECL mechanics report](reports/ifrs9_summary.md) demonstrates Stage 1, Stage 2 and Stage 3 calculations with assumed PD term structures and survival-weighted monthly default hazards. It applies discount factors to stated upside, base and downside scenarios. Its worked Stage 1 example reconciles month by month to **1,796.08 dataset monetary units**. It shows the mechanics; it is not an accounting provision or a substitute for portfolio-specific estimates and governance across PD, LGD, EAD and staging.
+The separate [ECL mechanics report](reports/ifrs9_summary.md) demonstrates Stage 1, Stage 2 and Stage 3 calculations with assumed PD term structures and survival-weighted monthly default hazards. It applies discount factors to stated upside, base and downside scenarios. Its worked Stage 1 example reconciles month by month to **1,796.08 dataset monetary units**. It shows the mechanics. It is not an accounting provision or a substitute for portfolio-specific estimates and governance across PD, LGD, EAD and staging.
 
 ## Limits
 

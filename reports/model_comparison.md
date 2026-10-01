@@ -1,6 +1,6 @@
 # Public-demo logistic baseline vs LightGBM
 
-Both models use the same 15-field public-demo contract and the same untouched test fold. LightGBM parameters come from 5-fold CV on the training fold; early stopping on the validation fold selected 193 trees for `{'learning_rate': 0.05, 'num_leaves': 31}`. The final LightGBM model and logistic baseline were then each fitted on the combined train and validation folds before this test evaluation.
+Both models use the same 15-field public-demo contract and the same untouched test fold. LightGBM parameters come from 5-fold cross-validation on the training fold. Early stopping on the validation fold then selected 193 trees for `{'learning_rate': 0.05, 'num_leaves': 31}`. The final LightGBM model and logistic baseline were then each fitted on the combined train and validation folds before this test evaluation.
 
 | metric | logistic baseline | LightGBM | delta |
 |---|---|---|---|

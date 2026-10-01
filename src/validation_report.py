@@ -59,7 +59,7 @@ def build_validation_report(
     challenger_result = (
         f"Candidate **{nomination}** was nominated for a separate promotion review."
         if nomination
-        else "No candidate passed every predeclared gate; the incumbent remains preferred."
+        else "No candidate passed every predeclared gate, so the incumbent remains preferred."
     )
     rejected = sum(not candidate.get("accepted", False) for candidate in candidates)
     split_rows = metadata.get("split_rows", {})
@@ -84,8 +84,9 @@ def build_validation_report(
         "## 3. Data and split protocol",
         "",
         "The work uses the historical Kaggle Home Credit application dataset with a deterministic "
-        "60/20/20 stratified split (seed 42). Candidate selection uses development-only out-of-fold "
-        "predictions; the frozen test fold is not used to choose or promote a challenger.",
+        "60/20/20 stratified split (seed 42). Candidate selection uses out-of-fold predictions from "
+        "development data only. The frozen test fold is never used to choose or promote a "
+        "challenger.",
         "",
         f"- Train rows: **{split_rows.get('train', 'not recorded')}**",
         f"- Validation rows: **{split_rows.get('validation', 'not recorded')}**",
@@ -105,7 +106,7 @@ def build_validation_report(
         "## 5. Development-only challenger evidence and gate outcome",
         "",
         f"- Data scope: **{data_scope}**",
-        f"- Candidates evaluated: **{len(candidates)}**; rejected: **{rejected}**.",
+        f"- Candidates evaluated: **{len(candidates)}**. Rejected: **{rejected}**.",
         f"- {challenger_result}",
         "",
         "## 6. Fairness diagnostic summary and limits",
@@ -131,8 +132,8 @@ def build_validation_report(
         "## 8. Decision economics and threshold sensitivity limits",
         "",
         f"The illustrative expected-value threshold is {threshold_text}. It is not a lending policy "
-        "or proof of profitability; "
-        "a lender would need local pricing, LGD, capital, collections, and policy constraints.",
+        "or proof of profitability. "
+        "A lender would need local pricing, LGD, capital, collections, and policy constraints.",
         "The fixed operating points below are descriptive and were not used to reselect the "
         "deployed threshold.",
         "",
@@ -151,15 +152,15 @@ def build_validation_report(
         "| control | status | evidence or limitation |",
         "|---|---|---|",
         "| Reproducibility | met | Deterministic split, seed, versioned bundle, and generated reports. |",
-        "| Discrimination | partially met | Historical test-fold intervals are published; no out-of-time evidence. |",
+        "| Discrimination | partially met | Historical test-fold intervals are published. No out-of-time evidence. |",
         "| Calibration | partially met | Historical Brier and calibration diagnostics are published. |",
         "| Public input contract | met | The served 15-field schema is versioned and tested. |",
         "| Explanations | partially met | Local SHAP explanations are diagnostic, not causal adverse-action reasons. |",
-        "| Fairness diagnostics | partially met | Offline group diagnostics exist; no legal or local assessment. |",
-        "| Monitoring design | partially met | Aggregate reference and simulations exist; no live feed. |",
+        "| Fairness diagnostics | partially met | Offline group diagnostics exist. No legal or local assessment. |",
+        "| Monitoring design | partially met | Aggregate reference and simulations exist. No live feed. |",
         "| Local data | not met | No lender-specific development or outcome data. |",
         "| Out-of-time evidence | not met | No temporal holdout or portfolio performance study. |",
-        "| Independent validation | not met | This solo-project report is not an independent validation. |",
+        "| Independent validation | not met | Not performed. |",
         "",
         "## 11. Required production controls not demonstrated here",
         "",

@@ -46,7 +46,7 @@ These commands cover unit, API, dashboard, artefact-contract and report-generati
 
 ## 4. Rebuild the public-demo model
 
-The training flow uses a deterministic stratified 60/20/20 split with seed 42. Cross-validation is confined to the training fold; the validation fold supplies early stopping; the test fold is opened for final evaluation only.
+The training flow uses a deterministic stratified 60/20/20 split with seed 42. Cross-validation is confined to the training fold. The validation fold supplies early stopping. The test fold is opened for final evaluation only.
 
 ```powershell
 $py = ".\.venv\Scripts\python.exe"
@@ -59,8 +59,8 @@ Retraining overwrites the versioned `models/public_demo/` bundle. Do it on a bra
 
 The main outputs are:
 
-- `models/public_demo/model.joblib`, category dtypes and metadata;
-- `reports/model_comparison.md` and explainability figures;
+- `models/public_demo/model.joblib`, category dtypes and metadata
+- `reports/model_comparison.md` and explainability figures
 - `reports/public_demo_audit.json`, `fairness_audit.md` and `threshold_analysis.md`.
 
 ## 5. Rebuild the lifecycle evidence

@@ -10,13 +10,13 @@ from api.schemas import ApplicantRequest
 from api.scoring import applicant_to_row, load_artifacts
 from src.config import model_bundle_dir
 
-# These are integration tests against the real trained model, not unit tests — they need
+# These are integration tests against the real trained model, not unit tests. They need
 # artifacts produced by `python -m src.train_lgbm`, which needs the Kaggle dataset. Neither is
 # available in a fresh CI checkout (the dataset can't be committed under Kaggle's terms), so skip
 # cleanly there instead of failing on a FileNotFoundError that has nothing to do with the code.
 pytestmark = pytest.mark.skipif(
     not model_bundle_dir("public_demo").exists(),
-    reason="requires the public-demo model bundle — run `python -m src.train_lgbm --profile public_demo`",
+    reason="requires the public-demo model bundle: run `python -m src.train_lgbm --profile public_demo`",
 )
 
 VALID_APPLICANT = {
@@ -120,8 +120,8 @@ def test_predict_decision_matches_threshold(client: TestClient) -> None:
 
 
 def test_predict_riskier_profile_scores_higher_pd(client: TestClient) -> None:
-    """Young, no employment history, large loan relative to income vs an established applicant —
-    the riskier profile should score a higher PD. A real behavioural check, not just a shape check."""
+    """Young, no employment history, large loan relative to income, against an established
+    applicant. The riskier profile should score a higher PD. A real behavioural check, not just a shape check."""
     safe_applicant = {
         **VALID_APPLICANT,
         "age_years": 45,
@@ -199,7 +199,7 @@ def test_predict_rejects_age_below_lower_boundary(client: TestClient) -> None:
 
 
 def test_predict_rejects_zero_income(client: TestClient) -> None:
-    """income_total uses gt=0, not ge=0 — a loan applicant reporting zero income is a data-entry
+    """income_total uses gt=0, not ge=0. A loan applicant reporting zero income is a data-entry
     error, not a valid (if unusual) applicant, and should be caught before it reaches the model."""
     applicant = {**VALID_APPLICANT, "income_total": 0}
     response = client.post("/predict", json=applicant)

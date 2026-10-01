@@ -272,29 +272,31 @@ def render_report(result: dict) -> str:
             f"{metrics['brier']:.4f} | {metrics['log_loss']:.4f} | {candidate['gate']} | "
             f"{'pass' if candidate['accepted'] else 'fail'} |"
         )
-    lines += ["", "## Predeclared gate results", ""]
+    lines += ["", "## Predeclared gate results", "", "| candidate | result |", "|---|---|"]
     for candidate in result["candidates"]:
         message = (
             "Passed every applicable gate."
             if candidate["accepted"]
-            else "; ".join(candidate["reasons"])
+            else ". ".join(candidate["reasons"]) + "."
         )
-        lines.append(f"- **{candidate['name']}:** {message}")
+        lines.append(f"| {candidate['name']} | {message} |")
     lines += ["", "## Outcome", ""]
     if result["nomination"] is None:
-        lines.append("No candidate passed every predeclared gate; the incumbent remains preferred.")
+        lines.append(
+            "No candidate passed every predeclared gate, so the incumbent remains preferred."
+        )
     else:
         lines.append(
-            f"`{result['nomination']}` is nominated for a separate promotion review; it is not deployed by this study."
+            f"`{result['nomination']}` is nominated for a separate promotion review. This study does not deploy it."
         )
     lines += [
         "",
-        "The study uses stratified m-out-of-n paired bootstrap samples for candidate gate intervals; "
-        "the full development sample is still used for each point estimate. The study is not nested "
-        "cross-validation: the incumbent's frozen parameters and tree count "
-        "come from the prior v1.2 development process. The OOF protocol prevents an estimator or "
-        "calibrator from scoring a row it fitted, but this report is still development evidence rather "
-        "than an independent validation.",
+        "Candidate gate intervals come from stratified m-out-of-n paired bootstrap samples. Each "
+        "point estimate still uses the full development sample. This is not nested "
+        "cross-validation. The incumbent's frozen parameters and tree count come from the earlier "
+        "v1.2 development process. The out-of-fold (OOF) protocol stops an estimator or calibrator "
+        "from scoring a row it was fitted on. Even so, this report is development evidence, not an "
+        "independent validation.",
         "",
     ]
     return "\n".join(lines)

@@ -135,11 +135,13 @@ def write_ifrs9_summary(examples: pd.DataFrame, out_path: Path) -> None:
         "",
         "## Stage rules used in this demonstration",
         "",
-        "- **Stage 1:** 12-month ECL when there is no significant increase in credit risk (SICR).",
-        "- **Stage 2:** lifetime ECL when days past due are at least 30, or current PD is at least "
-        "double origination PD and at least 5%.",
-        "- **Stage 3:** credit-impaired when days past due are at least 90 or the account is flagged "
-        "credit-impaired.",
+        "| stage | rule |",
+        "|---|---|",
+        "| 1 | 12-month ECL when there is no significant increase in credit risk (SICR). |",
+        "| 2 | Lifetime ECL when days past due are at least 30, or current PD is at least double "
+        "origination PD and at least 5%. |",
+        "| 3 | Credit-impaired when days past due are at least 90 or the account is flagged "
+        "credit-impaired. |",
         "",
         "## Scenario-weighted discounted examples",
         "",
@@ -200,7 +202,7 @@ def write_ifrs9_summary(examples: pd.DataFrame, out_path: Path) -> None:
         "For Stages 1 and 2, annual PD is converted to a constant monthly hazard. Each month's "
         "loss uses the probability that the account has survived to that month and defaults during "
         "that month, multiplied by LGD and EAD, then discounted at the effective interest rate. "
-        "Stage 1 includes defaults arising in the next 12 months; Stage 2 runs over the remaining "
+        "Stage 1 includes defaults arising in the next 12 months. Stage 2 runs over the remaining "
         "term. The result is "
         "weighted across the stated upside, base, and downside scenarios (20% / 60% / 20%).",
         "Because the example has no contractual cash-flow schedule, it recognises the assumed "

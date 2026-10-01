@@ -48,9 +48,11 @@ The monitoring reference is an out-of-sample monitoring reference window, disjoi
 
 ## Transformations
 
-- **baseline_replay:** `{"credit_multiplier": 1.0, "income_multiplier": 1.0, "occupation_missing_rate": 0.0}`
-- **mild_shift:** `{"credit_multiplier": 1.05, "income_multiplier": 0.9, "occupation_missing_rate": 0.1}`
-- **severe_shift:** `{"credit_multiplier": 1.2, "income_multiplier": 0.7, "occupation_missing_rate": 0.25}`
+| batch | transformations |
+|---|---|
+| baseline_replay | `{"credit_multiplier": 1.0, "income_multiplier": 1.0, "occupation_missing_rate": 0.0}` |
+| mild_shift | `{"credit_multiplier": 1.05, "income_multiplier": 0.9, "occupation_missing_rate": 0.1}` |
+| severe_shift | `{"credit_multiplier": 1.2, "income_multiplier": 0.7, "occupation_missing_rate": 0.25}` |
 
 ## Demonstration thresholds
 

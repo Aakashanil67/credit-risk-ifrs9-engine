@@ -1,8 +1,8 @@
 """Streamlit decision dashboard: fill in an applicant, get a scored decision with an explanation.
 
 Calls the FastAPI service first (configurable via the API_URL env var). If the API is unreachable
-— not running, still starting up, whatever — it falls back to scoring directly against the saved
-model artifacts via api.scoring, so the dashboard still works standalone.
+(not running, or still waking from a cold start), it scores directly against the saved model
+artifacts via api.scoring instead, so the dashboard still works on its own.
 """
 
 import os
@@ -183,7 +183,9 @@ if submitted:
         st.success(f"Scored via live API ({API_URL})")
         result = api_result
     else:
-        st.info("API unreachable — scoring directly against the saved model artifacts instead.")
+        st.info(
+            "The API is unreachable, so the dashboard is scoring directly against the saved model artifacts instead."
+        )
         result = score_locally(req)
 
     pd_estimate = result["probability_of_default"]
@@ -207,11 +209,11 @@ if submitted:
 
         if decision == "approve":
             st.success(
-                f"**APPROVE** — risk {pd_estimate:.1%} is below the {result['decision_threshold']:.0%} cutoff"
+                f"**APPROVE**: risk {pd_estimate:.1%} is below the {result['decision_threshold']:.0%} cutoff"
             )
         else:
             st.error(
-                f"**DECLINE** — risk {pd_estimate:.1%} is at or above the {result['decision_threshold']:.0%} cutoff"
+                f"**DECLINE**: risk {pd_estimate:.1%} is at or above the {result['decision_threshold']:.0%} cutoff"
             )
 
         st.metric(
@@ -251,5 +253,5 @@ if submitted:
             plt.close(fig)
         except FileNotFoundError:
             st.caption(
-                "Local model artifacts unavailable — waterfall plot needs `python -m src.train_lgbm` run once."
+                "Local model artifacts unavailable. The waterfall plot needs `python -m src.train_lgbm` run once."
             )

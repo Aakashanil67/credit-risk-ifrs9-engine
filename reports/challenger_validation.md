@@ -18,14 +18,16 @@ This development-only study compares candidates using five-fold out-of-fold pred
 
 ## Predeclared gate results
 
-- **base_sigmoid:** Brier improvement is smaller than 0.0005; Brier interval does not remain below zero; Log loss worsens
-- **base_isotonic:** Brier improvement is smaller than 0.0005; Brier interval does not remain below zero; Log loss worsens
-- **derived_raw:** AUC improvement is smaller than 0.003; AUC interval crosses zero
-- **derived_sigmoid:** Brier improvement is smaller than 0.0005; Brier interval does not remain below zero; Log loss worsens; Derived-feature parent did not pass its acceptance gate
-- **derived_isotonic:** Brier improvement is smaller than 0.0005; Brier interval does not remain below zero; Log loss worsens; Derived-feature parent did not pass its acceptance gate
+| candidate | result |
+|---|---|
+| base_sigmoid | Brier improvement is smaller than 0.0005. Brier interval does not remain below zero. Log loss worsens. |
+| base_isotonic | Brier improvement is smaller than 0.0005. Brier interval does not remain below zero. Log loss worsens. |
+| derived_raw | AUC improvement is smaller than 0.003. AUC interval crosses zero. |
+| derived_sigmoid | Brier improvement is smaller than 0.0005. Brier interval does not remain below zero. Log loss worsens. Derived-feature parent did not pass its acceptance gate. |
+| derived_isotonic | Brier improvement is smaller than 0.0005. Brier interval does not remain below zero. Log loss worsens. Derived-feature parent did not pass its acceptance gate. |
 
 ## Outcome
 
-No candidate passed every predeclared gate; the incumbent remains preferred.
+No candidate passed every predeclared gate, so the incumbent remains preferred.
 
-The study uses stratified m-out-of-n paired bootstrap samples for candidate gate intervals; the full development sample is still used for each point estimate. The study is not nested cross-validation: the incumbent's frozen parameters and tree count come from the prior v1.2 development process. The OOF protocol prevents an estimator or calibrator from scoring a row it fitted, but this report is still development evidence rather than an independent validation.
+Candidate gate intervals come from stratified m-out-of-n paired bootstrap samples. Each point estimate still uses the full development sample. This is not nested cross-validation. The incumbent's frozen parameters and tree count come from the earlier v1.2 development process. The out-of-fold (OOF) protocol stops an estimator or calibrator from scoring a row it was fitted on. Even so, this report is development evidence, not an independent validation.

@@ -155,10 +155,12 @@ def render_monitoring_report(result: dict) -> str:
     lines += [
         "## Transformations",
         "",
+        "| batch | transformations |",
+        "|---|---|",
     ]
     for batch in result["batches"]:
         lines.append(
-            f"- **{batch['name']}:** `{json.dumps(batch['transformations'], sort_keys=True)}`"
+            f"| {batch['name']} | `{json.dumps(batch['transformations'], sort_keys=True)}` |"
         )
     lines += [
         "",

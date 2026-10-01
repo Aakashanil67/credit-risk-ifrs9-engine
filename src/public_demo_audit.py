@@ -68,8 +68,8 @@ def write_fairness_audit(
         "# Fairness audit: public-demo risk model",
         "",
         "This audit evaluates the 15-field public-demo LightGBM model on its untouched Home "
-        "Credit test fold. `CODE_GENDER` is retained only for this offline diagnostic; it is not "
-        "a model feature and the API does not accept it. The illustrative decision threshold is "
+        "Credit test fold. `CODE_GENDER` is retained only for this offline diagnostic. It is not "
+        "a model feature, and the API does not accept it. The illustrative decision threshold is "
         f"{threshold:.6f}: applications below it are approved.",
         "",
         "## Gender groups",
@@ -129,8 +129,8 @@ def write_threshold_analysis(
         f"- Observed event rate among declined applications: **{metrics.precision:.2%}**",
         f"- Confusion matrix (actual default positive): TP {metrics.true_positives:,}, FP "
         f"{metrics.false_positives:,}, TN {metrics.true_negatives:,}, FN {metrics.false_negatives:,}.",
-        f"- Calibration intercept: **{calibration_intercept:.4f}**; calibration slope: "
-        f"**{calibration_slope:.4f}**.",
+        f"- Calibration intercept: **{calibration_intercept:.4f}**",
+        f"- Calibration slope: **{calibration_slope:.4f}**",
         "",
         "## Fixed-threshold sensitivity",
         "",
@@ -148,7 +148,7 @@ def write_threshold_analysis(
         "## Test-fold model uncertainty",
         "",
         "Intervals are 95% stratified bootstrap intervals from the untouched historical test "
-        "fold; they quantify sampling uncertainty, not future portfolio performance.",
+        "fold. They measure sampling uncertainty, not future portfolio performance.",
         "",
         "| metric | estimate | 95% stratified bootstrap interval |",
         "|---|---:|---:|",

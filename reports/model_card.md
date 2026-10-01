@@ -11,7 +11,7 @@ collections, accounting, or automated adverse action.
 
 The model uses Kaggle's Home Credit Default Risk `application_train.csv`: 307,511 historical
 applications with 122 raw columns and an 8.1% event rate. `TARGET=1` denotes payment difficulty
-under the competition's definition; the public dataset does not disclose the exact delinquency-day
+under the competition's definition. The public dataset does not disclose the exact delinquency-day
 threshold. The data is not South African and should not be treated as a local portfolio.
 
 The served contract has 15 application-time fields covering the applicant, household, loan and
@@ -53,12 +53,12 @@ samples. They quantify uncertainty on this historical split, not future portfoli
 At the illustrative threshold of 0.140351, the test-fold approval rate is 89.25%. Declined cases
 capture 25.86% of observed payment-difficulty events, and their observed event rate is 19.42%.
 The calibration intercept is 0.1336 and slope is 1.0560. These are diagnostics, not operating
-targets; the full matrix and assumptions are in [threshold analysis](threshold_analysis.md).
+targets. The full matrix and assumptions are in [threshold analysis](threshold_analysis.md).
 
 ## Explanations and loss estimates
 
 Each response includes the three largest local SHAP contributions. They describe how fitted model
-features moved a score relative to the model baseline; they are not causal findings or legally
+features moved a score relative to the model baseline. They are not causal findings or legally
 sufficient adverse-action reasons. Raw day-count features are translated into years and amounts
 into dataset monetary units before being shown.
 

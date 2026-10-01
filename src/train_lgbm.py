@@ -2,12 +2,12 @@
 
 Two credit-industry metrics show up alongside AUC because that's what a risk team will actually
 ask for:
-- Gini = 2*AUC - 1. Same ranking information as AUC, rescaled to [-1, 1] with 0 = random —
-  it's the number that ends up in a model-risk committee slide, so it's reported here too.
+- Gini = 2*AUC - 1. Same ranking information as AUC, rescaled to [-1, 1] with 0 = random.
+  It's the number that ends up on a model-risk committee slide, so it's reported here too.
 - KS (Kolmogorov-Smirnov) statistic = the maximum gap between the cumulative distribution of
   scores for defaulters vs non-defaulters. Answers "at the best possible cutoff, how well does
-  this model separate the two classes?" — a single number a credit committee can compare against
-  their existing scorecard's KS without knowing what AUC means.
+  this model separate the two classes?" A credit committee can compare it against their existing
+  scorecard's KS without knowing what AUC means.
 """
 
 import argparse
@@ -43,7 +43,7 @@ PARAM_GRID = [
     {"learning_rate": 0.10, "num_leaves": 31},
 ]
 CV_N_ESTIMATORS = (
-    300  # fixed and modest during the CV sweep — early stopping picks the real count later
+    300  # fixed and modest during the CV sweep; early stopping picks the real count later
 )
 CV_FOLDS = 5
 
@@ -203,8 +203,8 @@ def write_comparison(
         "# Public-demo logistic baseline vs LightGBM",
         "",
         "Both models use the same 15-field public-demo contract and the same untouched test "
-        "fold. LightGBM parameters come from 5-fold CV on the training fold; early stopping on "
-        f"the validation fold selected {best_iteration} trees for `{best_params}`. The final "
+        "fold. LightGBM parameters come from 5-fold cross-validation on the training fold. Early "
+        f"stopping on the validation fold then selected {best_iteration} trees for `{best_params}`. The final "
         "LightGBM model and logistic baseline were then each fitted on the combined train and "
         "validation folds before this test evaluation.",
         "",
@@ -262,7 +262,7 @@ def main() -> None:
     test_metrics = score_model(test[TARGET_COL], model.predict_proba(test_X)[:, 1])
     print(f"LightGBM untouched test: {test_metrics}")
 
-    # Persist the exact category boundaries LightGBM was trained on — encoding a category column
+    # Persist the exact category boundaries LightGBM was trained on. Encoding a category column
     # against a *different* set of categories at inference time silently shifts every code and
     # produces wrong predictions with no error, so inference must reuse these dtypes exactly.
     bundle_dir = model_bundle_dir(profile.value)

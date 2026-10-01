@@ -45,8 +45,8 @@ def plot_missingness_heatmap(missing: pd.DataFrame, out_path, top_n: int = 30) -
 
 
 def plot_key_feature_distributions(df: pd.DataFrame, out_path) -> None:
-    # DAYS_BIRTH / DAYS_EMPLOYED are negative day-counts relative to application date —
-    # flip to positive years so the histograms read naturally.
+    # DAYS_BIRTH / DAYS_EMPLOYED are negative day-counts relative to the application date.
+    # Flip them to positive years so the histograms read naturally.
     plotted = df[KEY_FEATURES].copy()
     plotted["DAYS_BIRTH"] = -plotted["DAYS_BIRTH"] / 365.25
     plotted["DAYS_EMPLOYED"] = plotted["DAYS_EMPLOYED"].replace(365243, pd.NA) / -365.25
@@ -83,8 +83,8 @@ def write_eda_summary(df: pd.DataFrame, missing: pd.DataFrame, corr: pd.Series, 
         "treat the target as a legally defined default. A model that predicts "
         f"'repaid' for every single applicant hits {balance['repaid (0)']:.1%} accuracy while "
         "identifying none of those events. AUC, precision-recall, "
-        "and the KS statistic (computed later against LightGBM) all separate the classes; "
-        "accuracy collapses them.",
+        "and the KS statistic (computed later against LightGBM) all separate the classes. "
+        "Accuracy collapses them.",
         "",
         "## Five findings",
         "",
@@ -105,8 +105,8 @@ def write_eda_summary(df: pd.DataFrame, missing: pd.DataFrame, corr: pd.Series, 
         "public-demo model deliberately excludes them because an applicant cannot supply them.",
         "",
         "4. **Income and credit amount are heavily right-skewed.** A handful of applicants report "
-        "incomes in the tens of millions; the histograms clip at the 99th percentile so the bulk "
-        "of the distribution is visible at all. The tree model uses the raw values; the logistic "
+        "incomes in the tens of millions. The histograms clip at the 99th percentile so most of "
+        "the distribution can be seen. The tree model uses the raw values. The logistic "
         "baseline standardises its numeric inputs.",
         "",
         f"5. **`DAYS_BIRTH` correlates {corr.get('DAYS_BIRTH', 0):.3f} with `TARGET`.** Younger "

@@ -80,7 +80,7 @@ async def log_request_metadata(request: Request, call_next):
 
 @app.exception_handler(RequestValidationError)
 async def clear_validation_errors(request: Request, exc: RequestValidationError) -> JSONResponse:
-    """FastAPI's default 422 body nests each error under loc/msg/type/ctx/url — accurate, but a
+    """FastAPI's default 422 body nests each error under loc/msg/type/ctx/url. That is accurate, but a
     caller has to reconstruct the field name from a list. Flatten it to 'field: message' instead."""
     errors = [f"{'.'.join(str(p) for p in err['loc'][1:])}: {err['msg']}" for err in exc.errors()]
     return JSONResponse(status_code=422, content={"detail": errors})
