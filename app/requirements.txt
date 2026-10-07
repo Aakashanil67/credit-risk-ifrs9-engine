@@ -3,7 +3,7 @@
 # chain (api.scoring, schemas, reason codes and model artifacts) needs at runtime. Training-only
 # packages are left out on purpose, keeping the hosted app small and its dependency graph clear.
 pandas==2.2.3
-numpy==1.26.4
+numpy==2.5.3
 scipy==1.13.1
 scikit-learn==1.5.2
 lightgbm==4.6.0
