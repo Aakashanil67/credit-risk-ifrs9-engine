@@ -12,6 +12,6 @@ matplotlib==3.9.2
 pyparsing==3.2.5
 fastapi==0.141.1
 streamlit==1.62.0
-joblib==1.5.3
+joblib==1.6.0
 httpx==0.28.1
 pydantic==2.13.4
